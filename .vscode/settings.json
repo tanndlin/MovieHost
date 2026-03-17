@@ -1,0 +1,20 @@
+{
+    "restoreTerminals.terminals": [
+        {
+            "splitTerminals": [
+                {
+                    "name": "Docker",
+                    "commands": [
+                        "docker compose up -d --build",
+                    ]
+                },
+                {
+                    "name": "Git",
+                    "commands": [
+                        "git status",
+                    ]
+                }
+            ]
+        }
+    ]
+}

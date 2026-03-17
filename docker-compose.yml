@@ -1,0 +1,30 @@
+services:
+    server:
+        build: ./server
+        container_name: movie-host-api
+        ports:
+            - '3000:3000'
+        pid: 'host'
+        networks:
+            - movie-host-network
+        volumes:
+            - 'F:/Media:/media'
+        environment:
+            - API_PORT=3000
+            - SERVE_DIR=/media
+
+    frontend:
+        build: ./frontend
+        container_name: movie-host-frontend
+        ports:
+            - '3001:80'
+        depends_on:
+            - server
+        networks:
+            - movie-host-network
+        environment:
+            - NODE_ENV=production
+
+networks:
+    movie-host-network:
+        driver: bridge

@@ -1,0 +1,25 @@
+# ---------- builder ----------
+FROM rust:1.92 AS builder
+WORKDIR /app
+
+COPY Cargo.toml Cargo.lock ./
+
+# Build deps only using dummy src — this layer is cached until Cargo.toml/Cargo.lock changes
+RUN mkdir -p src && echo "fn main() {}" > src/main.rs
+RUN cargo build --release
+RUN rm -rf src
+
+# Copy real source and touch main.rs so cargo knows to recompile
+COPY src ./src
+RUN touch src/main.rs
+RUN cargo build --release
+
+# ---------- runtime ----------
+FROM debian:bookworm-slim
+WORKDIR /app
+
+COPY --from=builder /app/target/release/server /app/server
+
+ENV API_PORT=3000
+EXPOSE 3000
+CMD ["./server"]
