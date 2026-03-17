@@ -1,19 +1,21 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
 import HomePage from './pages/HomePage';
+import ShowPage from './pages/ShowPage';
+import PlayerPage from './pages/PlayerPage';
 
 function App() {
     return (
-        <div className="w-screen h-screen bg-primary">
-            <Header />
-            <div className="py-4">
-                <BrowserRouter>
-                    <Routes>
-                        <Route path="/" element={<HomePage />} />
-                    </Routes>
-                </BrowserRouter>
+        <BrowserRouter>
+            <div className="min-h-screen">
+                <Header />
+                <Routes>
+                    <Route path="/" element={<HomePage />} />
+                    <Route path="/show/:name" element={<ShowPage />} />
+                    <Route path="/player" element={<PlayerPage />} />
+                </Routes>
             </div>
-        </div>
+        </BrowserRouter>
     );
 }
 

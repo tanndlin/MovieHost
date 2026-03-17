@@ -1,16 +1,20 @@
 use axum::{Router, extract::State, http::Method, routing::get};
 use std::sync::{Arc, Mutex};
 use tower_http::cors::{Any, CorsLayer};
+use tower_http::services::ServeDir;
 
 #[tokio::main]
 async fn main() {
     println!("Starting server...");
 
+    let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
+    let api_port = std::env::var("API_PORT").expect("API_PORT environment variable not set");
+
     let sys = Arc::new(Mutex::new(AppState {}));
 
-    // build our application with a single route
     let app = Router::new()
         .route("/api/ls", get(handle_ls))
+        .nest_service("/api/media", ServeDir::new(&serve_dir))
         .with_state(sys);
 
     let app = if cfg!(debug_assertions) {
@@ -24,8 +28,6 @@ async fn main() {
         app
     };
 
-    // run our app with hyper, listening globally on port 3000
-    let api_port = std::env::var("API_PORT").expect("API_PORT environment variable not set");
     println!("Server running on 0.0.0.0:{api_port}");
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{api_port}"))
         .await
@@ -37,7 +39,6 @@ async fn main() {
 struct AppState {}
 
 async fn handle_ls(State(_state): State<Arc<Mutex<AppState>>>) -> String {
-    // Get list of files recursively in the serve directory and return as JSON
     let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
     let mut entries = Vec::new();
     for entry in walkdir::WalkDir::new(serve_dir.clone())
@@ -51,7 +52,7 @@ async fn handle_ls(State(_state): State<Arc<Mutex<AppState>>>) -> String {
                 .unwrap()
                 .to_str()
                 .unwrap()
-                .to_string();
+                .replace('\\', "/");
             entries.push(path);
         }
     }
