@@ -10,12 +10,12 @@ async fn main() {
     let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
     let api_port = std::env::var("API_PORT").expect("API_PORT environment variable not set");
 
-    let sys = Arc::new(Mutex::new(AppState {}));
+    let state = Arc::new(Mutex::new(AppState {}));
 
     let app = Router::new()
         .route("/api/ls", get(handle_ls))
         .nest_service("/api/media", ServeDir::new(&serve_dir))
-        .with_state(sys);
+        .with_state(state);
 
     let app = if cfg!(debug_assertions) {
         app.layer(
