@@ -10,7 +10,7 @@ const VideoPlayer = ({ path, title }: Props) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const [error, setError] = useState(false);
 
-    const src = `${API_BASE_URL.replace('/api', '')}/api/media/${path}`;
+    const src = `${API_BASE_URL}/media/${path}`;
 
     return (
         <div className="flex flex-col w-full gap-3">
