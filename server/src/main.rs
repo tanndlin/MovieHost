@@ -41,7 +41,7 @@ struct AppState {}
 async fn handle_ls(State(_state): State<Arc<Mutex<AppState>>>) -> String {
     let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
     let mut entries = Vec::new();
-    for entry in walkdir::WalkDir::new(serve_dir.clone())
+    for entry in walkdir::WalkDir::new(&serve_dir)
         .into_iter()
         .filter_map(|e| e.ok())
     {
