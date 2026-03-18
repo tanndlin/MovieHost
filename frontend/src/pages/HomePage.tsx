@@ -1,3 +1,4 @@
+import axios from 'axios';
 import { useEffect, useState } from 'react';
 import MediaCard from '../components/MediaCard';
 import { parseMediaLibrary, type MediaLibrary } from '../types/media';
@@ -9,14 +10,11 @@ const HomePage = () => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        fetch(`${API_BASE_URL}/ls`)
+        axios
+            .get<string[]>(`${API_BASE_URL}/ls`)
             .then((res) => {
-                if (!res.ok) {
-                    throw new Error(res.statusText);
-                }
-                return res.json() as Promise<string[]>;
+                setLibrary(parseMediaLibrary(res.data));
             })
-            .then((paths) => setLibrary(parseMediaLibrary(paths)))
             .catch(() => setError('Failed to load media library'))
             .finally(() => setLoading(false));
     }, []);
