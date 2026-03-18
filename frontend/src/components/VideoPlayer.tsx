@@ -28,6 +28,7 @@ const VideoPlayer = ({ path, title }: Props) => {
                 </div>
             ) : (
                 <video
+                    style={{ viewTransitionName: title }}
                     ref={videoRef}
                     src={src}
                     controls

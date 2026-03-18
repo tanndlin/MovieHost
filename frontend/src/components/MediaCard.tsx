@@ -10,7 +10,12 @@ type Props = {
 const MediaCard = ({ title, to, subtitle, icon }: Props) => {
     return (
         <AnimatedLink to={to} className="block group">
-            <div className="overflow-hidden transition-all duration-200 border cursor-pointer rounded-xl bg-white/5 border-white/10 hover:border-gray-400/50 hover:bg-white/10">
+            <div
+                className="overflow-hidden transition-all duration-200 border cursor-pointer rounded-xl bg-white/5 border-white/10 hover:border-gray-400/50 hover:bg-white/10"
+                style={{
+                    viewTransitionName: title
+                }}
+            >
                 <div className="flex items-center justify-center h-40 bg-gradient-to-br from-gray-800/60 to-gray-900/60">
                     <span className="text-5xl">{icon ?? '🎬'}</span>
                 </div>
