@@ -51,7 +51,7 @@ module.exports = {
                 primary: '#111111',
                 secondary: '#222222',
                 tertiary: '#333333',
-                accent: 'rgb(12 74 110)'
+                accent: 'rgb(75 85 99)'
             }
         }
     },

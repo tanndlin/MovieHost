@@ -1,8 +1,8 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
 import HomePage from './pages/HomePage';
-import ShowPage from './pages/ShowPage';
 import PlayerPage from './pages/PlayerPage';
+import ShowPage from './pages/ShowPage';
 
 function App() {
     return (

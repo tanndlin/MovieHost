@@ -70,10 +70,14 @@ function parseEpisodeNumber(name: string): {
 } {
     // Match patterns like S01E02, 1x02, Season 1 Episode 2
     const sxe = name.match(/[Ss](\d+)[Ee](\d+)/);
-    if (sxe) return { season: `Season ${parseInt(sxe[1])}`, episode: sxe[2] };
+    if (sxe) {
+        return { season: `Season ${parseInt(sxe[1])}`, episode: sxe[2] };
+    }
 
     const nxn = name.match(/(\d+)[xX](\d+)/);
-    if (nxn) return { season: `Season ${parseInt(nxn[1])}`, episode: nxn[2] };
+    if (nxn) {
+        return { season: `Season ${parseInt(nxn[1])}`, episode: nxn[2] };
+    }
 
     return { season: 'Season 1', episode: null };
 }
@@ -84,7 +88,9 @@ export function parseMediaLibrary(paths: string[]): MediaLibrary {
     const other: MediaFile[] = [];
 
     for (const path of paths) {
-        if (!isVideoFile(path)) continue;
+        if (!isVideoFile(path)) {
+            continue;
+        }
 
         const parts = path.split('/');
         const topLevel = parts[0]?.toLowerCase() ?? '';
@@ -103,18 +109,20 @@ export function parseMediaLibrary(paths: string[]): MediaLibrary {
             const { season, episode } = parseEpisodeNumber(baseName);
             const resolvedSeason = hasSeason ? seasonFolder : season;
 
-            if (!showMap.has(showName)) showMap.set(showName, new Map());
+            if (!showMap.has(showName)) {
+                showMap.set(showName, new Map());
+            }
             const seasons = showMap.get(showName)!;
-            if (!seasons.has(resolvedSeason)) seasons.set(resolvedSeason, []);
+            if (!seasons.has(resolvedSeason)) {
+                seasons.set(resolvedSeason, []);
+            }
 
-            seasons
-                .get(resolvedSeason)!
-                .push({
-                    name: baseName,
-                    path,
-                    season: resolvedSeason,
-                    episode
-                });
+            seasons.get(resolvedSeason)!.push({
+                name: baseName,
+                path,
+                season: resolvedSeason,
+                episode
+            });
         } else if (topLevel === 'movies' || topLevel === 'movie') {
             // Movies/Movie Name.ext  or  Movies/Movie Name/Movie Name.ext
             const filename = parts[parts.length - 1];

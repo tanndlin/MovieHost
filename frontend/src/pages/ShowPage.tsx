@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import AnimatedLink from '../common/AnimatedLink';
 import { parseMediaLibrary, type Show } from '../types/media';
 import { API_BASE_URL } from '../utils/env';
@@ -15,7 +15,9 @@ const ShowPage = () => {
     useEffect(() => {
         fetch(`${API_BASE_URL}/ls`)
             .then((res) => {
-                if (!res.ok) throw new Error(res.statusText);
+                if (!res.ok) {
+                    throw new Error(res.statusText);
+                }
                 return res.json() as Promise<string[]>;
             })
             .then((paths) => {
@@ -38,8 +40,8 @@ const ShowPage = () => {
 
     if (loading) {
         return (
-            <main className="p-8 flex items-center justify-center min-h-64">
-                <p className="text-white/60 text-lg animate-pulse">
+            <main className="flex items-center justify-center p-8 min-h-64">
+                <p className="text-lg text-white/60 animate-pulse">
                     Loading...
                 </p>
             </main>
@@ -52,7 +54,7 @@ const ShowPage = () => {
                 <p className="text-red-400">{error || 'Show not found'}</p>
                 <AnimatedLink
                     to="/"
-                    className="text-blue-400 hover:underline mt-4 inline-block"
+                    className="inline-block mt-4 text-gray-400 hover:underline"
                 >
                     &larr; Back
                 </AnimatedLink>
@@ -61,18 +63,18 @@ const ShowPage = () => {
     }
 
     return (
-        <main className="p-6 max-w-screen-lg mx-auto">
+        <main className="max-w-screen-lg p-6 mx-auto">
             <div className="mb-6">
                 <AnimatedLink
                     to="/"
-                    className="text-white/50 hover:text-white text-sm transition-colors"
+                    className="text-sm transition-colors text-white/50 hover:text-white"
                 >
                     &larr; Back to Library
                 </AnimatedLink>
-                <h1 className="text-white text-3xl font-bold mt-2">
+                <h1 className="mt-2 text-3xl font-bold text-white">
                     {show.name}
                 </h1>
-                <p className="text-white/50 text-sm mt-1">
+                <p className="mt-1 text-sm text-white/50">
                     {show.seasons.length} season
                     {show.seasons.length !== 1 ? 's' : ''} &middot;{' '}
                     {show.seasons.reduce((a, s) => a + s.episodes.length, 0)}{' '}
@@ -84,7 +86,7 @@ const ShowPage = () => {
                 {show.seasons.map((season) => (
                     <div
                         key={season.name}
-                        className="rounded-xl border border-white/10 overflow-hidden"
+                        className="overflow-hidden border rounded-xl border-white/10"
                     >
                         <button
                             onClick={() =>
@@ -94,12 +96,12 @@ const ShowPage = () => {
                                         : season.name
                                 )
                             }
-                            className="w-full flex items-center justify-between px-5 py-3 bg-white/5 hover:bg-white/10 transition-colors text-left"
+                            className="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-white/5 hover:bg-white/10"
                         >
-                            <span className="text-white font-semibold">
+                            <span className="font-semibold text-white">
                                 {season.name}
                             </span>
-                            <span className="text-white/40 text-sm">
+                            <span className="text-sm text-white/40">
                                 {season.episodes.length} episode
                                 {season.episodes.length !== 1 ? 's' : ''}{' '}
                                 {openSeason === season.name ? '▲' : '▼'}
@@ -116,17 +118,17 @@ const ShowPage = () => {
                                                     `/player?path=${encodeURIComponent(ep.path)}&title=${encodeURIComponent(ep.name)}`
                                                 )
                                             }
-                                            className="w-full flex items-center gap-4 px-5 py-3 hover:bg-white/5 transition-colors text-left group"
+                                            className="flex items-center w-full gap-4 px-5 py-3 text-left transition-colors hover:bg-white/5 group"
                                         >
-                                            <span className="text-white/30 text-xs w-8 shrink-0">
+                                            <span className="w-8 text-xs text-white/30 shrink-0">
                                                 {ep.episode
                                                     ? `E${ep.episode.padStart(2, '0')}`
                                                     : ''}
                                             </span>
-                                            <span className="text-white/80 text-sm group-hover:text-white transition-colors truncate">
+                                            <span className="text-sm truncate transition-colors text-white/80 group-hover:text-white">
                                                 {ep.name}
                                             </span>
-                                            <span className="ml-auto text-white/20 group-hover:text-white/60 transition-colors shrink-0">
+                                            <span className="ml-auto transition-colors text-white/20 group-hover:text-white/60 shrink-0">
                                                 ▶
                                             </span>
                                         </button>

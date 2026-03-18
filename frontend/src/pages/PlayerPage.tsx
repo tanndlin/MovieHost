@@ -1,4 +1,4 @@
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import VideoPlayer from '../components/VideoPlayer';
 
 const PlayerPage = () => {
@@ -13,7 +13,7 @@ const PlayerPage = () => {
                 <p className="text-red-400">No media path specified</p>
                 <button
                     onClick={() => navigate('/')}
-                    className="text-blue-400 hover:underline mt-4 inline-block"
+                    className="inline-block mt-4 text-gray-400 hover:underline"
                 >
                     &larr; Back
                 </button>
@@ -22,11 +22,11 @@ const PlayerPage = () => {
     }
 
     return (
-        <main className="p-6 max-w-screen-xl mx-auto">
+        <main className="max-w-screen-xl p-6 mx-auto">
             <div className="mb-4">
                 <button
                     onClick={() => navigate(-1)}
-                    className="text-white/50 hover:text-white text-sm transition-colors bg-transparent p-0"
+                    className="p-0 text-sm transition-colors bg-transparent text-white/50 hover:text-white"
                 >
                     &larr; Back
                 </button>
