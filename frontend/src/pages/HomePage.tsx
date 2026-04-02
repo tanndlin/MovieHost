@@ -83,6 +83,9 @@ const HomePage = () => {
                                     title={show.name}
                                     subtitle={`${seasonLabel}${progressLabel}`}
                                     icon="📺"
+                                    path={
+                                        show.seasons[0]?.episodes[0]?.path || ''
+                                    }
                                     watchState={
                                         allFinished
                                             ? {
@@ -115,6 +118,7 @@ const HomePage = () => {
                                 to={`/player?path=${encodeURIComponent(movie.path)}&title=${encodeURIComponent(movie.name)}`}
                                 title={movie.name}
                                 icon="🎬"
+                                path={movie.path}
                                 watchState={watchStates[movie.path]}
                             />
                         ))}
@@ -134,6 +138,7 @@ const HomePage = () => {
                                 to={`/player?path=${encodeURIComponent(file.path)}&title=${encodeURIComponent(file.name)}`}
                                 title={file.name}
                                 icon="📄"
+                                path={file.path}
                                 watchState={watchStates[file.path]}
                             />
                         ))}

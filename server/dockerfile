@@ -15,8 +15,10 @@ RUN touch src/main.rs
 RUN cargo build --release
 
 # ---------- runtime ----------
-FROM debian:bookworm-slim
+FROM debian:trixie-slim
 WORKDIR /app
+
+RUN apt-get update && apt-get install -y ffmpeg
 
 COPY --from=builder /app/target/release/server /app/server
 

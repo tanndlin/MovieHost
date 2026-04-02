@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import AnimatedLink from '../common/AnimatedLink';
+import { API_BASE_URL } from '../utils/env';
 
 type WatchState = {
     lastPosition: number;
@@ -10,12 +12,19 @@ type Props = {
     to: string;
     subtitle?: string;
     icon?: string;
+    path?: string;
     watchState?: WatchState;
 };
 
-const MediaCard = ({ title, to, subtitle, icon, watchState }: Props) => {
+const MediaCard = ({ title, to, subtitle, icon, path, watchState }: Props) => {
     const finished = watchState?.finished;
     const inProgress = !finished && (watchState?.lastPosition ?? 0) > 0;
+    const [thumbError, setThumbError] = useState(false);
+
+    const thumbnailUrl =
+        path && !thumbError
+            ? `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(path)}`
+            : null;
 
     return (
         <AnimatedLink to={to} className="block group">
@@ -26,7 +35,16 @@ const MediaCard = ({ title, to, subtitle, icon, watchState }: Props) => {
                 }}
             >
                 <div className="relative flex items-center justify-center h-40 bg-gradient-to-br from-gray-800/60 to-gray-900/60">
-                    <span className="text-5xl">{icon ?? '🎬'}</span>
+                    {thumbnailUrl ? (
+                        <img
+                            src={thumbnailUrl}
+                            alt={title}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            onError={() => setThumbError(true)}
+                        />
+                    ) : (
+                        <span className="text-5xl">{icon ?? '🎬'}</span>
+                    )}
                     {finished && (
                         <span className="absolute top-2 right-2 bg-green-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded">
                             ✓
