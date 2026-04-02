@@ -82,29 +82,64 @@ async fn handle_thumbnail(Query(params): Query<types::ThumbnailParams>) -> impl 
         return ([(header::CONTENT_TYPE, "image/jpeg")], bytes).into_response();
     }
 
-    let status = tokio::process::Command::new("ffmpeg")
+    // Try to extract embedded attached_pic thumbnail first (fast path)
+    let extract_status = tokio::process::Command::new("ffmpeg")
         .args([
             "-i",
             &full_path,
-            "-ss",
-            "00:00:10",
-            "-vframes",
-            "1",
-            "-vf",
-            "scale=250:250:force_original_aspect_ratio=decrease",
+            "-map",
+            "0:v",
+            "-map",
+            "-0:V", // exclude non-attached video, leaving only attached_pic
+            "-c",
+            "copy",
             "-update",
             "1",
             "-y",
             &thumb_path,
         ])
+        .stdout(std::process::Stdio::null())
+        .stderr(std::process::Stdio::null())
         .status()
         .await;
 
-    match status {
-        Ok(s) if s.success() => match tokio::fs::read(&thumb_path).await {
-            Ok(bytes) => ([(header::CONTENT_TYPE, "image/jpeg")], bytes).into_response(),
-            Err(_) => StatusCode::INTERNAL_SERVER_ERROR.into_response(),
-        },
-        _ => StatusCode::NOT_FOUND.into_response(),
+    let bytes = match extract_status {
+        Ok(s) if s.success() => tokio::fs::read(&thumb_path).await.ok(),
+        _ => None,
+    };
+
+    // Fallback: decode a frame from the video (slow path)
+    let bytes = if bytes.is_none() {
+        let status = tokio::process::Command::new("ffmpeg")
+            .args([
+                "-i",
+                &full_path,
+                "-ss",
+                "00:00:10",
+                "-vframes",
+                "1",
+                "-vf",
+                "scale=250:250:force_original_aspect_ratio=decrease",
+                "-update",
+                "1",
+                "-y",
+                &thumb_path,
+            ])
+            .stdout(std::process::Stdio::null())
+            .stderr(std::process::Stdio::null())
+            .status()
+            .await;
+
+        match status {
+            Ok(s) if s.success() => tokio::fs::read(&thumb_path).await.ok(),
+            _ => None,
+        }
+    } else {
+        bytes
+    };
+
+    match bytes {
+        Some(b) => ([(header::CONTENT_TYPE, "image/jpeg")], b).into_response(),
+        None => StatusCode::NOT_FOUND.into_response(),
     }
 }
