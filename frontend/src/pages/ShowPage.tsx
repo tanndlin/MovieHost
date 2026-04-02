@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AnimatedLink from '../common/AnimatedLink';
+import { StorageContext } from '../contexts/StorageContext';
 import { parseMediaLibrary, type Show } from '../types/media';
 import { API_BASE_URL } from '../utils/env';
 
@@ -11,6 +12,7 @@ const ShowPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [openSeason, setOpenSeason] = useState<string | null>(null);
+    const { watchStates } = useContext(StorageContext);
 
     useEffect(() => {
         fetch(`${API_BASE_URL}/ls`)
@@ -110,30 +112,44 @@ const ShowPage = () => {
 
                         {openSeason === season.name && (
                             <ul className="divide-y divide-white/5">
-                                {season.episodes.map((ep) => (
-                                    <li key={ep.path}>
-                                        <button
-                                            onClick={() =>
-                                                navigate(
-                                                    `/player?path=${encodeURIComponent(ep.path)}&title=${encodeURIComponent(ep.name)}`
-                                                )
-                                            }
-                                            className="flex items-center w-full gap-4 px-5 py-3 text-left transition-colors hover:bg-white/5 group"
-                                        >
-                                            <span className="w-8 text-xs text-white/30 shrink-0">
-                                                {ep.episode
-                                                    ? `E${ep.episode.padStart(2, '0')}`
-                                                    : ''}
-                                            </span>
-                                            <span className="text-sm truncate transition-colors text-white/80 group-hover:text-white">
-                                                {ep.name}
-                                            </span>
-                                            <span className="ml-auto transition-colors text-white/20 group-hover:text-white/60 shrink-0">
-                                                ▶
-                                            </span>
-                                        </button>
-                                    </li>
-                                ))}
+                                {season.episodes.map((ep) => {
+                                    const ws = watchStates[ep.path];
+                                    const finished = ws?.finished;
+                                    const inProgress =
+                                        !finished && (ws?.lastPosition ?? 0) > 0;
+                                    return (
+                                        <li key={ep.path}>
+                                            <button
+                                                onClick={() =>
+                                                    navigate(
+                                                        `/player?path=${encodeURIComponent(ep.path)}&title=${encodeURIComponent(ep.name)}`
+                                                    )
+                                                }
+                                                className="flex items-center w-full gap-4 px-5 py-3 text-left transition-colors hover:bg-white/5 group"
+                                            >
+                                                <span className="w-8 text-xs text-white/30 shrink-0">
+                                                    {ep.episode
+                                                        ? `E${ep.episode.padStart(2, '0')}`
+                                                        : ''}
+                                                </span>
+                                                <span className="text-sm truncate transition-colors text-white/80 group-hover:text-white">
+                                                    {ep.name}
+                                                </span>
+                                                {finished && (
+                                                    <span className="ml-auto text-xs font-semibold text-green-500 shrink-0">
+                                                        ✓
+                                                    </span>
+                                                )}
+                                                {inProgress && (
+                                                    <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                                                )}
+                                                <span className={`transition-colors text-white/20 group-hover:text-white/60 shrink-0 ${finished || inProgress ? '' : 'ml-auto'}`}>
+                                                    ▶
+                                                </span>
+                                            </button>
+                                        </li>
+                                    );
+                                })}
                             </ul>
                         )}
                     </div>

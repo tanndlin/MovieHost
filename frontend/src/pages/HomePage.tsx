@@ -1,13 +1,30 @@
 import axios from 'axios';
-import { useEffect, useState } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import MediaCard from '../components/MediaCard';
-import { parseMediaLibrary, type MediaLibrary } from '../types/media';
+import { StorageContext } from '../contexts/StorageContext';
+import {
+    parseMediaLibrary,
+    type MediaLibrary,
+    type Show
+} from '../types/media';
 import { API_BASE_URL } from '../utils/env';
+
+function showWatchProgress(
+    show: Show,
+    watchStates: Record<string, { lastPosition: number; finished: boolean }>
+): { watched: number; total: number } {
+    const episodes = show.seasons.flatMap((s) => s.episodes);
+    const watched = episodes.filter(
+        (ep) => watchStates[ep.path]?.finished
+    ).length;
+    return { watched, total: episodes.length };
+}
 
 const HomePage = () => {
     const [library, setLibrary] = useState<MediaLibrary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const { watchStates } = useContext(StorageContext);
 
     useEffect(() => {
         axios
@@ -47,15 +64,41 @@ const HomePage = () => {
                         TV Shows
                     </h2>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                        {shows.map((show) => (
-                            <MediaCard
-                                key={show.name}
-                                to={`/show/${encodeURIComponent(show.name)}`}
-                                title={show.name}
-                                subtitle={`${show.seasons.length} season${show.seasons.length !== 1 ? 's' : ''}`}
-                                icon="📺"
-                            />
-                        ))}
+                        {shows.map((show) => {
+                            const { watched, total } = showWatchProgress(
+                                show,
+                                watchStates
+                            );
+                            const seasonCount = show.seasons.length;
+                            const seasonLabel = `${seasonCount} season${seasonCount !== 1 ? 's' : ''}`;
+                            const progressLabel =
+                                watched > 0
+                                    ? ` · ${watched}/${total} watched`
+                                    : '';
+                            const allFinished = total > 0 && watched === total;
+                            return (
+                                <MediaCard
+                                    key={show.name}
+                                    to={`/show/${encodeURIComponent(show.name)}`}
+                                    title={show.name}
+                                    subtitle={`${seasonLabel}${progressLabel}`}
+                                    icon="📺"
+                                    watchState={
+                                        allFinished
+                                            ? {
+                                                  lastPosition: 0,
+                                                  finished: true
+                                              }
+                                            : watched > 0
+                                              ? {
+                                                    lastPosition: 1,
+                                                    finished: false
+                                                }
+                                              : undefined
+                                    }
+                                />
+                            );
+                        })}
                     </div>
                 </section>
             )}
@@ -72,6 +115,7 @@ const HomePage = () => {
                                 to={`/player?path=${encodeURIComponent(movie.path)}&title=${encodeURIComponent(movie.name)}`}
                                 title={movie.name}
                                 icon="🎬"
+                                watchState={watchStates[movie.path]}
                             />
                         ))}
                     </div>
@@ -90,6 +134,7 @@ const HomePage = () => {
                                 to={`/player?path=${encodeURIComponent(file.path)}&title=${encodeURIComponent(file.name)}`}
                                 title={file.name}
                                 icon="📄"
+                                watchState={watchStates[file.path]}
                             />
                         ))}
                     </div>
