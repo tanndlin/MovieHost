@@ -1,4 +1,4 @@
-import { forwardRef, useState } from 'react';
+import { forwardRef, useEffect, useState } from 'react';
 import { API_BASE_URL } from '../utils/env';
 
 type Props = {
@@ -13,6 +13,19 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
         const [error, setError] = useState(false);
 
         const src = `${API_BASE_URL}/media/${path}`;
+        // Set the favicon to the video thumbnail and the title to the video title
+        useEffect(() => {
+            if (title) {
+                document.title = title;
+            }
+
+            const link = document.querySelector(
+                "link[rel~='icon']"
+            ) as HTMLLinkElement;
+            if (link) {
+                link.href = `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(path)}`;
+            }
+        }, [title, path]);
 
         return (
             <div className="flex flex-col w-full gap-3">
