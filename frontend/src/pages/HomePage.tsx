@@ -60,7 +60,8 @@ const HomePage = () => {
         <main className="max-w-screen-xl p-6 mx-auto">
             {shows.length > 0 && (
                 <section className="mb-10">
-                    <h2 className="mb-4 text-2xl font-semibold text-white">
+                    <h2 className="flex items-center gap-2.5 mb-5 text-xl font-bold text-white">
+                        <span className="w-1 h-5 rounded-full bg-blue-500 inline-block shrink-0" />
                         TV Shows
                     </h2>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -108,7 +109,8 @@ const HomePage = () => {
 
             {movies.length > 0 && (
                 <section className="mb-10">
-                    <h2 className="mb-4 text-2xl font-semibold text-white">
+                    <h2 className="flex items-center gap-2.5 mb-5 text-xl font-bold text-white">
+                        <span className="w-1 h-5 rounded-full bg-purple-500 inline-block shrink-0" />
                         Movies
                     </h2>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -128,7 +130,8 @@ const HomePage = () => {
 
             {other.length > 0 && (
                 <section className="mb-10">
-                    <h2 className="mb-4 text-2xl font-semibold text-white">
+                    <h2 className="flex items-center gap-2.5 mb-5 text-xl font-bold text-white">
+                        <span className="w-1 h-5 rounded-full bg-gray-500 inline-block shrink-0" />
                         Other
                     </h2>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">

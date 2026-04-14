@@ -29,40 +29,49 @@ const MediaCard = ({ title, to, subtitle, icon, path, watchState }: Props) => {
     return (
         <AnimatedLink to={to} className="block group">
             <div
-                className="overflow-hidden transition-all duration-200 border cursor-pointer rounded-xl bg-white/5 border-white/10 hover:border-gray-400/50 hover:bg-white/10"
-                style={{
-                    viewTransitionName: title
-                }}
+                className="relative overflow-hidden rounded-xl cursor-pointer ring-1 ring-white/10 shadow-lg transition-all duration-300 group-hover:ring-white/25 group-hover:shadow-2xl group-hover:shadow-black/70"
+                style={{ viewTransitionName: title }}
             >
-                <div className="relative flex items-center justify-center h-40 bg-gradient-to-br from-gray-800/60 to-gray-900/60">
+                <div className="aspect-[2/3] relative bg-gradient-to-br from-gray-800 to-gray-900">
                     {thumbnailUrl ? (
                         <img
                             src={thumbnailUrl}
                             alt={title}
-                            className="absolute inset-0 w-full h-full object-cover"
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                             onError={() => setThumbError(true)}
                         />
                     ) : (
-                        <span className="text-5xl">{icon ?? '🎬'}</span>
+                        <div className="absolute inset-0 flex items-center justify-center">
+                            <span className="text-5xl opacity-50">
+                                {icon ?? '🎬'}
+                            </span>
+                        </div>
                     )}
+
+                    {/* Bottom gradient overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
+
+                    {/* Status badge */}
                     {finished && (
-                        <span className="absolute top-2 right-2 bg-green-600 text-white text-xs font-semibold px-1.5 py-0.5 rounded">
+                        <span className="absolute top-2 right-2 flex items-center justify-center w-5 h-5 bg-green-600/90 backdrop-blur-sm text-white text-xs font-bold rounded-full">
                             ✓
                         </span>
                     )}
                     {inProgress && (
-                        <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-amber-400" />
+                        <span className="absolute top-2 right-2 w-2.5 h-2.5 rounded-full bg-amber-400 ring-2 ring-amber-400/40 animate-pulse" />
                     )}
-                </div>
-                <div className="p-3">
-                    <p className="text-sm font-medium text-white truncate transition-colors group-hover:text-gray-300">
-                        {title}
-                    </p>
-                    {subtitle && (
-                        <p className="text-white/50 text-xs mt-0.5 truncate">
-                            {subtitle}
+
+                    {/* Title overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 p-3">
+                        <p className="text-sm font-semibold text-white truncate leading-snug">
+                            {title}
                         </p>
-                    )}
+                        {subtitle && (
+                            <p className="text-xs text-white/55 mt-0.5 truncate">
+                                {subtitle}
+                            </p>
+                        )}
+                    </div>
                 </div>
             </div>
         </AnimatedLink>

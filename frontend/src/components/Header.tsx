@@ -2,12 +2,29 @@ import AnimatedLink from '../common/AnimatedLink';
 
 const Header = () => {
     return (
-        <header className="flex items-center gap-4 px-6 py-3 border-b bg-black/30 backdrop-blur border-white/10">
+        <header className="sticky top-0 z-50 flex items-center gap-4 px-6 py-4 border-b bg-black/70 backdrop-blur-xl border-white/10">
             <AnimatedLink
                 to="/"
-                className="text-xl font-bold tracking-wide text-white transition-colors hover:text-gray-300"
+                className="flex items-center gap-2.5 transition-opacity hover:opacity-75"
             >
-                MovieHost
+                <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    className="text-blue-400 shrink-0"
+                >
+                    <path
+                        d="M15 10l4.553-2.276A1 1 0 0121 8.723v6.554a1 1 0 01-1.447.894L15 14M4 8h8a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4a2 2 0 012-2z"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                    />
+                </svg>
+                <span className="text-lg font-bold tracking-tight text-white">
+                    MovieHost
+                </span>
             </AnimatedLink>
         </header>
     );

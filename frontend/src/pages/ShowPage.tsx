@@ -66,17 +66,20 @@ const ShowPage = () => {
 
     return (
         <main className="max-w-screen-lg p-6 mx-auto">
-            <div className="mb-6">
+            <div className="mb-8">
                 <AnimatedLink
                     to="/"
-                    className="text-sm transition-colors text-white/50 hover:text-white"
+                    className="inline-flex items-center gap-1.5 text-sm transition-colors text-white/40 hover:text-white/80 mb-4"
                 >
-                    &larr; Back to Library
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                        <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    Back to Library
                 </AnimatedLink>
-                <h1 className="mt-2 text-3xl font-bold text-white">
+                <h1 className="text-3xl font-bold text-white tracking-tight">
                     {show.name}
                 </h1>
-                <p className="mt-1 text-sm text-white/50">
+                <p className="mt-1.5 text-sm text-white/40">
                     {show.seasons.length} season
                     {show.seasons.length !== 1 ? 's' : ''} &middot;{' '}
                     {show.seasons.reduce((a, s) => a + s.episodes.length, 0)}{' '}
@@ -84,11 +87,11 @@ const ShowPage = () => {
                 </p>
             </div>
 
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2">
                 {show.seasons.map((season) => (
                     <div
                         key={season.name}
-                        className="overflow-hidden border rounded-xl border-white/10"
+                        className="overflow-hidden rounded-xl ring-1 ring-white/10"
                     >
                         <button
                             onClick={() =>
@@ -98,15 +101,23 @@ const ShowPage = () => {
                                         : season.name
                                 )
                             }
-                            className="flex items-center justify-between w-full px-5 py-3 text-left transition-colors bg-white/5 hover:bg-white/10"
+                            className="flex items-center justify-between w-full px-5 py-3.5 text-left transition-colors bg-white/[0.04] hover:bg-white/[0.08]"
                         >
                             <span className="font-semibold text-white">
                                 {season.name}
                             </span>
-                            <span className="text-sm text-white/40">
+                            <span className="flex items-center gap-2 text-sm text-white/40">
                                 {season.episodes.length} episode
-                                {season.episodes.length !== 1 ? 's' : ''}{' '}
-                                {openSeason === season.name ? '▲' : '▼'}
+                                {season.episodes.length !== 1 ? 's' : ''}
+                                <svg
+                                    width="14"
+                                    height="14"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    className={`transition-transform duration-200 ${openSeason === season.name ? 'rotate-180' : ''}`}
+                                >
+                                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
                             </span>
                         </button>
 
@@ -125,26 +136,34 @@ const ShowPage = () => {
                                                         `/player?path=${encodeURIComponent(ep.path)}&title=${encodeURIComponent(ep.name)}`
                                                     )
                                                 }
-                                                className="flex items-center w-full gap-4 px-5 py-3 text-left transition-colors hover:bg-white/5 group"
+                                                className={`flex items-center w-full gap-4 px-5 py-3 text-left transition-colors group ${finished ? 'hover:bg-green-950/30' : inProgress ? 'hover:bg-amber-950/30' : 'hover:bg-white/[0.04]'}`}
                                             >
-                                                <span className="w-8 text-xs text-white/30 shrink-0">
+                                                <span className="w-8 text-xs font-mono text-white/25 shrink-0">
                                                     {ep.episode
                                                         ? `E${ep.episode.padStart(2, '0')}`
                                                         : ''}
                                                 </span>
-                                                <span className="text-sm truncate transition-colors text-white/80 group-hover:text-white">
+                                                <span className="flex-1 text-sm truncate transition-colors text-white/70 group-hover:text-white">
                                                     {ep.name}
                                                 </span>
-                                                {finished && (
-                                                    <span className="ml-auto text-xs font-semibold text-green-500 shrink-0">
-                                                        ✓
-                                                    </span>
-                                                )}
-                                                {inProgress && (
-                                                    <span className="ml-auto w-2 h-2 rounded-full bg-amber-400 shrink-0" />
-                                                )}
-                                                <span className={`transition-colors text-white/20 group-hover:text-white/60 shrink-0 ${finished || inProgress ? '' : 'ml-auto'}`}>
-                                                    ▶
+                                                <span className="flex items-center gap-2 ml-auto shrink-0">
+                                                    {finished && (
+                                                        <span className="flex items-center justify-center w-4 h-4 text-xs font-bold text-green-400 bg-green-500/15 rounded-full">
+                                                            ✓
+                                                        </span>
+                                                    )}
+                                                    {inProgress && (
+                                                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                                                    )}
+                                                    <svg
+                                                        width="14"
+                                                        height="14"
+                                                        viewBox="0 0 24 24"
+                                                        fill="currentColor"
+                                                        className="text-white/20 transition-colors group-hover:text-white/60"
+                                                    >
+                                                        <path d="M8 5v14l11-7z" />
+                                                    </svg>
                                                 </span>
                                             </button>
                                         </li>
