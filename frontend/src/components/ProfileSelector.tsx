@@ -1,4 +1,5 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect } from 'react';
+import useFetch from '../common/useFetch';
 import { StorageContext } from '../contexts/StorageContext';
 
 type Profile = {
@@ -8,18 +9,17 @@ type Profile = {
 
 const ProfileSelector = () => {
     const { id, setID } = useContext(StorageContext);
-    const [profiles, setProfiles] = useState<Profile[]>([]);
 
-    const fetchProfiles = () => {
-        fetch('/api/profiles')
-            .then((res) => res.json())
-            .then((data) => setProfiles(data))
-            .catch(() => console.error('Failed to load profiles'));
-    };
+    const {
+        loading,
+        error,
+        data: profiles,
+        refetch
+    } = useFetch<Profile[]>('/api/profiles');
 
     useEffect(() => {
-        fetchProfiles();
-    }, [id]); // 👈 refetch when id changes (e.g. after new profile created)
+        refetch();
+    }, [id, refetch]);
 
     return (
         <div className="ml-auto">
@@ -30,11 +30,13 @@ const ProfileSelector = () => {
                     setID(val === 'new' ? undefined : parseInt(val, 10));
                 }}
                 className="bg-gray-700 text-white rounded px-2 py-1 text-sm"
+                disabled={loading || !!error}
             >
+                {loading && <option>Loading...</option>}
                 <option value="" disabled>
                     Select a profile
                 </option>
-                {profiles.map((p) => (
+                {profiles?.map((p) => (
                     <option key={p.id} value={p.id}>
                         {p.username}
                     </option>

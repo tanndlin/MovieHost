@@ -1,45 +1,36 @@
 import { useContext, useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import AnimatedLink from '../common/AnimatedLink';
+import useFetch from '../common/useFetch';
 import { StorageContext } from '../contexts/StorageContext';
-import { parseMediaLibrary, type Show } from '../types/media';
+import { type Show } from '../types';
 import { API_BASE_URL } from '../utils/env';
+import { parseMediaLibrary } from '../utils/utils';
 
 const ShowPage = () => {
     const { name } = useParams<{ name: string }>();
     const navigate = useNavigate();
     const [show, setShow] = useState<Show | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
     const [openSeason, setOpenSeason] = useState<string | null>(null);
     const { profile } = useContext(StorageContext);
     const watchStates = profile?.watch_states || {};
 
+    const { loading, error, data } = useFetch<string[]>(`${API_BASE_URL}/ls`);
+
     useEffect(() => {
-        fetch(`${API_BASE_URL}/ls`)
-            .then((res) => {
-                if (!res.ok) {
-                    throw new Error(res.statusText);
+        if (data) {
+            const lib = parseMediaLibrary(data);
+            const found = lib.shows.find(
+                (s) => s.name === decodeURIComponent(name ?? '')
+            );
+            if (found) {
+                setShow(found);
+                if (found.seasons.length > 0) {
+                    setOpenSeason(found.seasons[0].name);
                 }
-                return res.json() as Promise<string[]>;
-            })
-            .then((paths) => {
-                const lib = parseMediaLibrary(paths);
-                const found = lib.shows.find(
-                    (s) => s.name === decodeURIComponent(name ?? '')
-                );
-                if (found) {
-                    setShow(found);
-                    if (found.seasons.length > 0) {
-                        setOpenSeason(found.seasons[0].name);
-                    }
-                } else {
-                    setError('Show not found');
-                }
-            })
-            .catch(() => setError('Failed to load media library'))
-            .finally(() => setLoading(false));
-    }, [name]);
+            }
+        }
+    }, [data, name]);
 
     if (loading) {
         return (
@@ -73,7 +64,13 @@ const ShowPage = () => {
                     className="inline-flex items-center gap-1.5 text-sm transition-colors text-white/40 hover:text-white/80 mb-4"
                 >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                        <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        <path
+                            d="M19 12H5M5 12l7 7M5 12l7-7"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        />
                     </svg>
                     Back to Library
                 </AnimatedLink>
@@ -117,7 +114,13 @@ const ShowPage = () => {
                                     fill="none"
                                     className={`transition-transform duration-200 ${openSeason === season.name ? 'rotate-180' : ''}`}
                                 >
-                                    <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                    <path
+                                        d="M6 9l6 6 6-6"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    />
                                 </svg>
                             </span>
                         </button>
@@ -128,7 +131,8 @@ const ShowPage = () => {
                                     const ws = watchStates[ep.path];
                                     const finished = ws?.finished;
                                     const inProgress =
-                                        !finished && (ws?.last_position ?? 0) > 0;
+                                        !finished &&
+                                        (ws?.last_position ?? 0) > 0;
                                     return (
                                         <li key={ep.path}>
                                             <button

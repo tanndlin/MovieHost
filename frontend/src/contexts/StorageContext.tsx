@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Profile, WatchState } from '../types/media';
+import { Profile, WatchState } from '../types';
 
 type IStorage = {
     id: number;

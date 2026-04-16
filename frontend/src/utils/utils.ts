@@ -1,86 +1,12 @@
-export type MediaFile = {
-    path: string;
-    name: string;
-    ext: string;
-};
-
-export type Episode = {
-    name: string;
-    path: string;
-    season: string;
-    episode: string | null;
-};
-
-export type Season = {
-    name: string;
-    episodes: Episode[];
-};
-
-export type Show = {
-    name: string;
-    basePath: string;
-    seasons: Season[];
-};
-
-export type Movie = {
-    name: string;
-    path: string;
-};
-
-export type MediaLibrary = {
-    shows: Show[];
-    movies: Movie[];
-    other: MediaFile[];
-};
-
-const VIDEO_EXTENSIONS = new Set([
-    'mp4',
-    'mkv',
-    'avi',
-    'mov',
-    'wmv',
-    'flv',
-    'webm',
-    'm4v',
-    'mpg',
-    'mpeg',
-    'ts',
-    'm2ts'
-]);
-
-export function isVideoFile(path: string): boolean {
-    const ext = path.split('.').pop()?.toLowerCase() ?? '';
-    return VIDEO_EXTENSIONS.has(ext);
-}
-
-function getExt(path: string): string {
-    return path.split('.').pop()?.toLowerCase() ?? '';
-}
-
-function getBaseName(path: string): string {
-    const parts = path.split('/');
-    const filename = parts[parts.length - 1];
-    const dotIdx = filename.lastIndexOf('.');
-    return dotIdx > 0 ? filename.substring(0, dotIdx) : filename;
-}
-
-function parseEpisodeNumber(name: string): {
-    season: string;
-    episode: string | null;
-} {
-    // Match patterns like S01E02, 1x02, Season 1 Episode 2
-    const sxe = name.match(/[Ss](\d+)[Ee](\d+)/);
-    if (sxe) {
-        return { season: `Season ${parseInt(sxe[1])}`, episode: sxe[2] };
-    }
-
-    const nxn = name.match(/(\d+)[xX](\d+)/);
-    if (nxn) {
-        return { season: `Season ${parseInt(nxn[1])}`, episode: nxn[2] };
-    }
-
-    return { season: 'Season 1', episode: null };
-}
+import {
+    Episode,
+    MediaFile,
+    MediaLibrary,
+    Movie,
+    Season,
+    Show,
+    VIDEO_EXTENSIONS
+} from '../types';
 
 export function parseMediaLibrary(paths: string[]): MediaLibrary {
     const showMap = new Map<string, Map<string, Episode[]>>();
@@ -153,16 +79,36 @@ export function parseMediaLibrary(paths: string[]): MediaLibrary {
     return { shows, movies, other };
 }
 
-export type WatchState = {
-    last_position: number;
-    finished: boolean;
-    movie_path: string;
-};
+export function isVideoFile(path: string): boolean {
+    const ext = path.split('.').pop()?.toLowerCase() ?? '';
+    return VIDEO_EXTENSIONS.has(ext);
+}
 
-export type Profile = {
-    id: string;
-    name: string;
-    watch_states: {
-        [showName: string]: WatchState;
-    };
-};
+function getExt(path: string): string {
+    return path.split('.').pop()?.toLowerCase() ?? '';
+}
+
+function getBaseName(path: string): string {
+    const parts = path.split('/');
+    const filename = parts[parts.length - 1];
+    const dotIdx = filename.lastIndexOf('.');
+    return dotIdx > 0 ? filename.substring(0, dotIdx) : filename;
+}
+
+function parseEpisodeNumber(name: string): {
+    season: string;
+    episode: string | null;
+} {
+    // Match patterns like S01E02, 1x02, Season 1 Episode 2
+    const sxe = name.match(/[Ss](\d+)[Ee](\d+)/);
+    if (sxe) {
+        return { season: `Season ${parseInt(sxe[1])}`, episode: sxe[2] };
+    }
+
+    const nxn = name.match(/(\d+)[xX](\d+)/);
+    if (nxn) {
+        return { season: `Season ${parseInt(nxn[1])}`, episode: nxn[2] };
+    }
+
+    return { season: 'Season 1', episode: null };
+}

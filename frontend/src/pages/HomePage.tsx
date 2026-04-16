@@ -2,13 +2,9 @@ import axios from 'axios';
 import { useContext, useEffect, useState } from 'react';
 import MediaCard from '../components/MediaCard';
 import { StorageContext } from '../contexts/StorageContext';
-import {
-    parseMediaLibrary,
-    WatchState,
-    type MediaLibrary,
-    type Show
-} from '../types/media';
+import { WatchState, type MediaLibrary, type Show } from '../types';
 import { API_BASE_URL } from '../utils/env';
+import { parseMediaLibrary } from '../utils/utils';
 
 function showWatchProgress(
     show: Show,

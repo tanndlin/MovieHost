@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import AnimatedLink from '../common/AnimatedLink';
-import { WatchState } from '../types/media';
+import { WatchState } from '../types';
 import { API_BASE_URL } from '../utils/env';
 
 type Props = {
