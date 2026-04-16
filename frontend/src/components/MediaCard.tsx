@@ -1,11 +1,7 @@
 import { useState } from 'react';
 import AnimatedLink from '../common/AnimatedLink';
+import { WatchState } from '../types/media';
 import { API_BASE_URL } from '../utils/env';
-
-type WatchState = {
-    lastPosition: number;
-    finished: boolean;
-};
 
 type Props = {
     title: string;
@@ -18,7 +14,7 @@ type Props = {
 
 const MediaCard = ({ title, to, subtitle, icon, path, watchState }: Props) => {
     const finished = watchState?.finished;
-    const inProgress = !finished && (watchState?.lastPosition ?? 0) > 0;
+    const inProgress = !finished && (watchState?.last_position ?? 0) > 0;
     const [thumbError, setThumbError] = useState(false);
 
     const thumbnailUrl =

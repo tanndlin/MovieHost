@@ -1,27 +1,18 @@
 import React, { useEffect } from 'react';
+import { Profile, WatchState } from '../types/media';
 
 type IStorage = {
-    // A mapping of show names to their watch state.
-    watchStates: {
-        [showName: string]: WatchState;
-    };
-    setWatchStates: React.Dispatch<
-        React.SetStateAction<{
-            [showName: string]: WatchState;
-        }>
-    >;
-};
-
-type WatchState = {
-    // The last position the user was at in the video, in seconds.
-    lastPosition: number;
-    // Whether the user has finished watching the video.
-    finished: boolean;
+    id: number;
+    setID: (id: number | undefined) => void;
+    profile?: Profile;
+    setWatchState: (path: string, ws: WatchState) => void;
 };
 
 const defaultState: IStorage = {
-    watchStates: {},
-    setWatchStates: () => {}
+    id: 0,
+    setID: () => {},
+    profile: undefined,
+    setWatchState: () => {}
 };
 
 type Props = {
@@ -31,28 +22,74 @@ type Props = {
 export const StorageContext = React.createContext<IStorage>(defaultState);
 
 export const StorageProvider = ({ children }: Props) => {
-    const [watchStates, setWatchStates] = React.useState<{
-        [showName: string]: WatchState;
-    }>(defaultState.watchStates);
+    const [id, setID] = React.useState<number | undefined>(
+        localStorage.getItem('profileID')
+            ? parseInt(localStorage.getItem('profileID') as string, 10) ||
+                  undefined
+            : undefined
+    );
+    const [profile, setProfile] = React.useState<Profile | undefined>(
+        undefined
+    );
 
     useEffect(() => {
-        // Load watch states from localStorage on mount.
-        const storedWatchStates = localStorage.getItem('watchStates');
-        if (storedWatchStates) {
-            setWatchStates(JSON.parse(storedWatchStates));
+        if (id === undefined) {
+            fetch('/api/profile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            })
+                .then((res) => res.json())
+                .then((data) => {
+                    setID(data.id);
+                    localStorage.setItem('profileID', `${data.id}`);
+                    setProfile(data);
+                })
+                .catch((err) => console.error(err));
+        } else {
+            // Otherwise, we should load the existing profile
+            fetch(`/api/profile/${id}`)
+                .then((res) => {
+                    if (res.status === 404) {
+                        console.warn('Profile not found');
+                        setID(undefined);
+                        localStorage.removeItem('profileID');
+                        return null;
+                    }
+                    return res.json();
+                })
+                .then((data) => {
+                    if (data) {
+                        setProfile(data);
+                    }
+                })
+                .catch((err) => {
+                    console.error(err);
+                });
         }
-    }, []);
+    }, [id]);
 
-    useEffect(() => {
-        // Save watch states to localStorage whenever they change.
-        localStorage.setItem('watchStates', JSON.stringify(watchStates));
+    const setWatchState = (path: string, ws: WatchState) => {
+        if (!profile) {
+            console.error('No profile loaded, cannot set watch state');
+            return;
+        }
 
-        console.log('Updated watch states:', watchStates);
-    }, [watchStates]);
+        fetch(`/api/profile/${id}/watch_state`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                movie_path: path,
+                last_position: ws.last_position,
+                finished: ws.finished
+            })
+        }).catch((err) => console.error(err));
+    };
 
     const state: IStorage = {
-        watchStates,
-        setWatchStates
+        id: id!,
+        setID,
+        profile,
+        setWatchState
     };
 
     return (

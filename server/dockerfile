@@ -9,6 +9,8 @@ RUN mkdir -p src && echo "fn main() {}" > src/main.rs
 RUN cargo build --release
 RUN rm -rf src
 
+COPY migrations ./migrations
+
 # Copy real source and touch main.rs so cargo knows to recompile
 COPY src ./src
 RUN touch src/main.rs

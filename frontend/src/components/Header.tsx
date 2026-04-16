@@ -1,4 +1,5 @@
 import AnimatedLink from '../common/AnimatedLink';
+import ProfileSelector from './ProfileSelector';
 
 const Header = () => {
     return (
@@ -26,6 +27,7 @@ const Header = () => {
                     MovieHost
                 </span>
             </AnimatedLink>
+            <ProfileSelector />
         </header>
     );
 };

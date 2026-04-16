@@ -4,6 +4,7 @@ import MediaCard from '../components/MediaCard';
 import { StorageContext } from '../contexts/StorageContext';
 import {
     parseMediaLibrary,
+    WatchState,
     type MediaLibrary,
     type Show
 } from '../types/media';
@@ -11,7 +12,7 @@ import { API_BASE_URL } from '../utils/env';
 
 function showWatchProgress(
     show: Show,
-    watchStates: Record<string, { lastPosition: number; finished: boolean }>
+    watchStates: Record<string, WatchState>
 ): { watched: number; total: number } {
     const episodes = show.seasons.flatMap((s) => s.episodes);
     const watched = episodes.filter(
@@ -24,7 +25,8 @@ const HomePage = () => {
     const [library, setLibrary] = useState<MediaLibrary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const { watchStates } = useContext(StorageContext);
+    const { profile } = useContext(StorageContext);
+    const watchStates = profile?.watch_states || {};
 
     useEffect(() => {
         axios
@@ -90,13 +92,21 @@ const HomePage = () => {
                                     watchState={
                                         allFinished
                                             ? {
-                                                  lastPosition: 0,
-                                                  finished: true
+                                                  last_position: 0,
+                                                  finished: true,
+                                                  movie_path:
+                                                      show.seasons[0]
+                                                          ?.episodes[0]?.path ||
+                                                      ''
                                               }
                                             : watched > 0
                                               ? {
-                                                    lastPosition: 1,
-                                                    finished: false
+                                                    last_position: 1,
+                                                    finished: false,
+                                                    movie_path:
+                                                        show.seasons[0]
+                                                            ?.episodes[0]
+                                                            ?.path || ''
                                                 }
                                               : undefined
                                     }

@@ -1,7 +1,30 @@
 services:
+    db:
+        image: postgres:15-alpine
+        container_name: postgres_db
+        restart: always
+        environment:
+            POSTGRES_USER: user
+            POSTGRES_PASSWORD: password
+            POSTGRES_DB: movie_host
+        ports:
+            - "5432:5432"
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        networks:
+            - movie-host-network
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U user -d movie_host"]
+            interval: 5s
+            timeout: 5s
+            retries: 5
+
     server:
         build: ./server
         container_name: movie-host-api
+        depends_on:
+            db:
+                condition: service_healthy
         ports:
             - '3000:3000'
         pid: 'host'
@@ -12,6 +35,7 @@ services:
         environment:
             - API_PORT=3000
             - SERVE_DIR=/media
+            - DATABASE_URL=postgresql://user:password@db:5432/movie_host
 
     frontend:
         build: ./frontend
@@ -28,3 +52,6 @@ services:
 networks:
     movie-host-network:
         driver: bridge
+
+volumes:
+    pgdata:

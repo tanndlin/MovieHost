@@ -12,7 +12,8 @@ const ShowPage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [openSeason, setOpenSeason] = useState<string | null>(null);
-    const { watchStates } = useContext(StorageContext);
+    const { profile } = useContext(StorageContext);
+    const watchStates = profile?.watch_states || {};
 
     useEffect(() => {
         fetch(`${API_BASE_URL}/ls`)
@@ -127,7 +128,7 @@ const ShowPage = () => {
                                     const ws = watchStates[ep.path];
                                     const finished = ws?.finished;
                                     const inProgress =
-                                        !finished && (ws?.lastPosition ?? 0) > 0;
+                                        !finished && (ws?.last_position ?? 0) > 0;
                                     return (
                                         <li key={ep.path}>
                                             <button

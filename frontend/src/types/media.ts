@@ -152,3 +152,17 @@ export function parseMediaLibrary(paths: string[]): MediaLibrary {
 
     return { shows, movies, other };
 }
+
+export type WatchState = {
+    last_position: number;
+    finished: boolean;
+    movie_path: string;
+};
+
+export type Profile = {
+    id: string;
+    name: string;
+    watch_states: {
+        [showName: string]: WatchState;
+    };
+};
