@@ -34,6 +34,14 @@ export const StorageProvider = ({ children }: Props) => {
 
     useEffect(() => {
         if (id === undefined) {
+            localStorage.removeItem('profileID');
+        } else {
+            localStorage.setItem('profileID', `${id}`);
+        }
+    }, [id]);
+
+    useEffect(() => {
+        if (id === undefined) {
             fetch('/api/profile', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' }
