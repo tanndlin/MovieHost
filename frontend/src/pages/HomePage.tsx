@@ -21,10 +21,14 @@ const HomePage = () => {
     const [library, setLibrary] = useState<MediaLibrary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const { profile } = useContext(StorageContext);
+    const { id, profile } = useContext(StorageContext);
     const watchStates = profile?.watch_states || {};
 
     useEffect(() => {
+        if (id === undefined) {
+            return;
+        }
+
         axios
             .get<string[]>(`${API_BASE_URL}/ls`)
             .then((res) => {
@@ -32,7 +36,17 @@ const HomePage = () => {
             })
             .catch(() => setError('Failed to load media library'))
             .finally(() => setLoading(false));
-    }, []);
+    }, [id]);
+
+    if (id === undefined) {
+        return (
+            <main className="flex items-center justify-center p-8 min-h-64">
+                <p className="text-lg text-white/60 animate-pulse">
+                    Please select a profile or create a new one...
+                </p>
+            </main>
+        );
+    }
 
     if (loading) {
         return (

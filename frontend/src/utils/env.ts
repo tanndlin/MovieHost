@@ -6,3 +6,5 @@ export const API_BASE_URL =
 
 export const WEBSOCKET_URL =
     NODE_ENV === 'production' ? '/ws' : `ws://localhost:${API_PORT}/ws`;
+
+export const STORAGE_PROFILE_KEY = 'profileID';

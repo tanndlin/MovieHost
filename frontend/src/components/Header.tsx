@@ -1,9 +1,14 @@
+import { CogIcon } from '@heroicons/react/24/outline';
+import { useContext } from 'react';
 import AnimatedLink from '../common/AnimatedLink';
+import { StorageContext } from '../contexts/StorageContext';
 import ProfileSelector from './ProfileSelector';
 
 const Header = () => {
+    const { profile } = useContext(StorageContext);
+
     return (
-        <header className="sticky top-0 z-50 flex items-center gap-4 px-6 py-4 border-b bg-black/70 backdrop-blur-xl border-white/10">
+        <header className="sticky top-0 z-50 flex justify-between gap-4 px-6 py-4 border-b bg-black/70 backdrop-blur-xl border-white/10">
             <AnimatedLink
                 to="/"
                 className="flex items-center gap-2.5 transition-opacity hover:opacity-75"
@@ -27,7 +32,17 @@ const Header = () => {
                     MovieHost
                 </span>
             </AnimatedLink>
-            <ProfileSelector />
+            <span className="flex items-center gap-4">
+                {profile && (
+                    <AnimatedLink
+                        to="/settings"
+                        className="ml-auto transition-opacity hover:opacity-75"
+                    >
+                        <CogIcon className="w-5 h-5 text-gray-400" />
+                    </AnimatedLink>
+                )}
+                <ProfileSelector />
+            </span>
         </header>
     );
 };

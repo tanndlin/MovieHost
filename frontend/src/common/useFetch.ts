@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 export default function useFetch<T>(
     input: URL | RequestInfo,
@@ -9,7 +9,7 @@ export default function useFetch<T>(
     const [data, setData] = useState<T | null>(null);
     const [_, setTick] = useState(0); // Used to trigger refetch
 
-    const refetch = () => setTick((t) => t + 1);
+    const refetch = useCallback(() => setTick((t) => t + 1), []);
 
     useEffect(() => {
         setLoading(true);

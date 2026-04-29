@@ -3,6 +3,7 @@ import Header from './components/Header';
 import { StorageProvider } from './contexts/StorageContext';
 import HomePage from './pages/HomePage';
 import PlayerPage from './pages/PlayerPage';
+import SettingsPage from './pages/SettingsPage';
 import ShowPage from './pages/ShowPage';
 
 function App() {
@@ -15,6 +16,7 @@ function App() {
                         <Route path="/" element={<HomePage />} />
                         <Route path="/show/:name" element={<ShowPage />} />
                         <Route path="/player" element={<PlayerPage />} />
+                        <Route path="/settings" element={<SettingsPage />} />
                     </Routes>
                 </div>
             </BrowserRouter>

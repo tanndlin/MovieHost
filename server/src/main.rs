@@ -2,6 +2,7 @@ use axum::Json;
 use axum::extract::{Path, Query, State};
 use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
+use axum::routing::delete;
 use axum::{
     Router,
     http::Method,
@@ -51,6 +52,7 @@ async fn main() {
         .route("/api/profile", post(handle_post_profile))
         .route("/api/profiles", get(handle_get_profiles))
         .route("/api/profile/{id}", get(handle_get_profile))
+        .route("/api/profile/{id}", delete(handle_delete_profile))
         .route("/api/profile/{id}/watch_state", put(handle_put_watch_state))
         .nest_service("/api/media", ServeDir::new(&serve_dir))
         .with_state(app_state);
@@ -241,6 +243,25 @@ async fn handle_get_profile(
         serde_json::to_string(&response).unwrap(),
     )
         .into_response()
+}
+
+async fn handle_delete_profile(
+    State(AppState { db_pool }): State<AppState>,
+    Path(id): Path<i32>,
+) -> impl IntoResponse {
+    let result = sqlx::query("DELETE FROM users WHERE id = $1")
+        .bind(id)
+        .execute(&db_pool)
+        .await;
+
+    match result {
+        Ok(r) if r.rows_affected() > 0 => StatusCode::OK.into_response(),
+        Ok(_) => StatusCode::NOT_FOUND.into_response(),
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
 }
 
 async fn handle_get_profiles(State(AppState { db_pool }): State<AppState>) -> impl IntoResponse {
