@@ -8,10 +8,16 @@ export default defineConfig({
     plugins: [react(), svgr()],
 
     server: {
+        host: '0.0.0.0',
+        watch: { usePolling: true },
         proxy: {
             '/api': {
-                target: 'http://localhost:3000', // Rust backend
+                target: process.env.API_URL ?? 'http://localhost:3000',
                 changeOrigin: true
+            },
+            '/ws': {
+                target: process.env.API_URL ?? 'http://localhost:3000',
+                ws: true
             }
         }
     },

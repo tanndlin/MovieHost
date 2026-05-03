@@ -1,24 +1,25 @@
-use axum::Json;
-use axum::extract::{Path, Query, State};
-use axum::http::{StatusCode, header};
-use axum::response::IntoResponse;
-use axum::routing::delete;
-use axum::{
-    Router,
-    http::Method,
-    routing::{get, post, put},
-};
+use axum::extract::ws::WebSocket;
+use axum::extract::{Path, Query, State, WebSocketUpgrade};
+use axum::http::{Method, StatusCode, header};
+use axum::response::{IntoResponse, Response};
+use axum::routing::{delete, get, post, put};
+use axum::{Json, Router};
 use sqlx::postgres::PgPoolOptions;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
+use std::sync::{Arc, Mutex};
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 
+use crate::ws::websocket::handle_ws;
+
 mod types;
+mod ws;
 
 #[derive(Clone)]
 struct AppState {
     db_pool: sqlx::Pool<sqlx::Postgres>,
+    websockets: Vec<Arc<Mutex<WebSocket>>>,
 }
 
 #[tokio::main]
@@ -41,7 +42,10 @@ async fn main() {
 
     println!("Database connected and migrations applied.");
 
-    let app_state = AppState { db_pool };
+    let app_state = Arc::new(Mutex::new(AppState {
+        db_pool,
+        websockets: vec![],
+    }));
 
     let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
     let api_port = std::env::var("API_PORT").expect("API_PORT environment variable not set");
@@ -54,6 +58,7 @@ async fn main() {
         .route("/api/profile/{id}", get(handle_get_profile))
         .route("/api/profile/{id}", delete(handle_delete_profile))
         .route("/api/profile/{id}/watch_state", put(handle_put_watch_state))
+        .route("/ws", get(ws_handler))
         .nest_service("/api/media", ServeDir::new(&serve_dir))
         .with_state(app_state);
 
@@ -175,7 +180,9 @@ async fn handle_thumbnail(Query(params): Query<types::ThumbnailParams>) -> impl 
     }
 }
 
-async fn handle_post_profile(State(AppState { db_pool }): State<AppState>) -> impl IntoResponse {
+async fn handle_post_profile(State(state): State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
+    let db_pool = state.lock().unwrap().clone().db_pool;
+
     match sqlx::query_as::<_, types::Profile>(
         "INSERT INTO users (username) VALUES (CONCAT('User', nextval('users_id_seq'))) RETURNING id, username"
     )
@@ -194,9 +201,11 @@ async fn handle_post_profile(State(AppState { db_pool }): State<AppState>) -> im
 }
 
 async fn handle_get_profile(
-    State(AppState { db_pool }): State<AppState>,
+    State(state): State<Arc<Mutex<AppState>>>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
+    let db_pool = state.lock().unwrap().clone().db_pool;
+
     let user = sqlx::query_as::<_, types::Profile>("SELECT id, username FROM users WHERE id = $1")
         .bind(id)
         .fetch_one(&db_pool)
@@ -246,9 +255,10 @@ async fn handle_get_profile(
 }
 
 async fn handle_delete_profile(
-    State(AppState { db_pool }): State<AppState>,
+    State(state): State<Arc<Mutex<AppState>>>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
+    let db_pool = state.lock().unwrap().clone().db_pool;
     let result = sqlx::query("DELETE FROM users WHERE id = $1")
         .bind(id)
         .execute(&db_pool)
@@ -264,7 +274,8 @@ async fn handle_delete_profile(
     }
 }
 
-async fn handle_get_profiles(State(AppState { db_pool }): State<AppState>) -> impl IntoResponse {
+async fn handle_get_profiles(State(state): State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
+    let db_pool = state.lock().unwrap().clone().db_pool;
     let profiles = sqlx::query_as::<_, types::Profile>("SELECT id, username FROM users")
         .fetch_all(&db_pool)
         .await;
@@ -283,10 +294,11 @@ async fn handle_get_profiles(State(AppState { db_pool }): State<AppState>) -> im
 }
 
 async fn handle_put_watch_state(
-    State(AppState { db_pool }): State<AppState>,
+    State(state): State<Arc<Mutex<AppState>>>,
     Path(id): Path<i32>,
     Json(payload): Json<types::WatchStateUpdate>,
 ) -> impl IntoResponse {
+    let db_pool = state.lock().unwrap().clone().db_pool;
     let result = sqlx::query(
         "INSERT INTO watched_movies (user_id, movie_path, last_position, finished)
          VALUES ($1, $2, $3, $4)
@@ -307,4 +319,12 @@ async fn handle_put_watch_state(
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<Mutex<AppState>>>) -> Response {
+    ws.on_upgrade(move |socket| handle_socket(socket, state))
+}
+
+async fn handle_socket(socket: WebSocket, state: Arc<Mutex<AppState>>) {
+    handle_ws(socket, state).await;
 }
