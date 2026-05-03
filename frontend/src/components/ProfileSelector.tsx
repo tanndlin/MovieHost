@@ -27,9 +27,9 @@ const ProfileSelector = () => {
                 value={id || ''}
                 onChange={(e) => {
                     const val = e.target.value;
-                    setID(val === 'new' ? undefined : parseInt(val, 10));
+                    setID(val === 'new' ? -1 : parseInt(val, 10));
                 }}
-                className="bg-gray-700 text-white rounded px-2 py-1 text-sm"
+                className="px-2 py-1 text-sm text-white bg-gray-700 rounded"
                 disabled={loading || !!error}
             >
                 {loading && <option>Loading...</option>}

@@ -45,6 +45,15 @@ export const StorageProvider = ({ children }: Props) => {
             return;
         }
 
+        if (id === -1) {
+            createNewProfile().then((newProfile) => {
+                if (newProfile) {
+                    setID(newProfile.id);
+                }
+            });
+            return;
+        }
+
         fetch(`/api/profile/${id}`)
             .then((res) => {
                 if (res.status === 404) {
