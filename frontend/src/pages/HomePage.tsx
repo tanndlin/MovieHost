@@ -69,7 +69,7 @@ const HomePage = () => {
     const { shows, movies, other } = library!;
 
     return (
-        <main className="max-w-screen-xl p-6 mx-auto">
+        <main className="max-w-screen-xl p-6 mx-auto w-full">
             {shows.length > 0 && (
                 <section className="mb-10">
                     <h2 className="flex items-center gap-2.5 mb-5 text-xl font-bold text-white">

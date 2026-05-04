@@ -61,8 +61,3 @@ export type Profile = {
         [showName: string]: WatchState;
     };
 };
-
-export type WsServerMessage = {
-    type: string;
-    payload: any;
-};

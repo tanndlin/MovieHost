@@ -1,23 +1,43 @@
-import React, { useEffect } from 'react';
-import { WsServerMessage } from '../types';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import {
+    WsClientMessage,
+    WsServerMessage,
+    WsServerMessageType
+} from '../wsTypes';
+import { StorageContext } from './StorageContext';
 
 type IWebsocketContext = {
     ws: WebSocket | null;
+    sendMessage: (msg: WsClientMessage) => void;
+    addCallback: (
+        type: WsServerMessageType,
+        callback: (msg: WsServerMessage) => void
+    ) => void;
+    removeCallback: (
+        type: WsServerMessageType,
+        callback: (msg: WsServerMessage) => void
+    ) => void;
 };
 
 const defaultState: IWebsocketContext = {
-    ws: null
+    ws: null,
+    sendMessage: () => {},
+    addCallback: () => {},
+    removeCallback: () => {}
 };
 
 type Props = {
     children?: React.ReactNode;
 };
 
-export const WebsocketContext =
-    React.createContext<IWebsocketContext>(defaultState);
+export const WebsocketContext = createContext<IWebsocketContext>(defaultState);
 
 export const WebsocketProvider = ({ children }: Props) => {
-    const [ws, setWs] = React.useState<WebSocket | null>(null);
+    const [ws, setWs] = useState<WebSocket | null>(null);
+    const { id } = useContext(StorageContext);
+    const callbacks = useRef<
+        Partial<Record<WsServerMessageType, ((msg: WsServerMessage) => void)[]>>
+    >({});
 
     useEffect(() => {
         const socket = new WebSocket(`ws://${window.location.host}/ws`);
@@ -33,7 +53,11 @@ export const WebsocketProvider = ({ children }: Props) => {
         }
 
         ws.onopen = () => {
-            console.log('WebSocket connection established');
+            const handshakeMessage: WsClientMessage = {
+                type: 'Handshake',
+                userId: id
+            };
+            ws.send(JSON.stringify(handshakeMessage));
         };
         ws.onclose = () => {
             console.log('WebSocket connection closed');
@@ -43,12 +67,52 @@ export const WebsocketProvider = ({ children }: Props) => {
         };
         ws.onmessage = (event) => {
             const message: WsServerMessage = JSON.parse(event.data);
-            console.log('Received message from server:', message);
+
+            const cbs = callbacks.current[message.type];
+            if (cbs) {
+                cbs.forEach((cb) => cb(message));
+            } else {
+                console.warn(
+                    'No callback registered for message type:',
+                    message.type
+                );
+            }
         };
-    }, [ws]);
+    }, [ws, id]);
+
+    const addCallback = (
+        type: WsServerMessageType,
+        callback: (msg: WsServerMessage) => void
+    ) => {
+        if (!callbacks.current[type]) {
+            callbacks.current[type] = [];
+        }
+        callbacks.current[type].push(callback);
+    };
+
+    const removeCallback = (
+        type: WsServerMessageType,
+        callback: (msg: WsServerMessage) => void
+    ) => {
+        const cbs = callbacks.current[type];
+        if (cbs) {
+            callbacks.current[type] = cbs.filter((cb) => cb !== callback);
+        }
+    };
+
+    const sendMessage = (msg: WsClientMessage) => {
+        if (!ws || ws.readyState !== WebSocket.OPEN) {
+            console.error('WebSocket connection not established');
+            return;
+        }
+        ws.send(JSON.stringify(msg));
+    };
 
     const state: IWebsocketContext = {
-        ws
+        ws,
+        sendMessage,
+        addCallback,
+        removeCallback
     };
 
     return (

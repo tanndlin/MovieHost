@@ -1,5 +1,7 @@
-import { forwardRef, useEffect, useState } from 'react';
+import { forwardRef, useContext, useEffect, useState } from 'react';
+import { WebsocketContext } from '../contexts/WebsocketContext';
 import { API_BASE_URL } from '../utils/env';
+import { WsControlMessage } from '../wsTypes';
 
 type Props = {
     path: string;
@@ -26,6 +28,30 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
                 link.href = `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(path)}`;
             }
         }, [title, path]);
+
+        const { addCallback, removeCallback } = useContext(WebsocketContext);
+        useEffect(() => {
+            addCallback('Control', handleControlMessage);
+            function handleControlMessage(msg: WsControlMessage) {
+                if (!ref || !('current' in ref) || !ref.current) {
+                    return;
+                }
+
+                switch (msg.action.type) {
+                    case 'Play':
+                        ref.current.play();
+                        break;
+                    case 'Pause':
+                        ref.current.pause();
+                        break;
+                    case 'Seek':
+                        ref.current.currentTime += msg.action.seek;
+                        break;
+                }
+            }
+
+            return () => removeCallback('Control', handleControlMessage);
+        }, [addCallback, ref]);
 
         return (
             <div className="flex flex-col w-full gap-3">

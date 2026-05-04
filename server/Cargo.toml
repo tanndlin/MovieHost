@@ -11,3 +11,4 @@ tokio = { version = "1.50.0", features = ["full"] }
 tower-http = {version = "0.6.8", default-features = false, features = ["cors", "fs"]}
 walkdir = "2.5.0"
 sqlx = { version = "0.8", features = ["runtime-tokio", "tls-rustls", "postgres", "macros"] }
+futures-util = "0.3"

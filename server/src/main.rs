@@ -1,13 +1,15 @@
-use axum::extract::ws::WebSocket;
+use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{Path, Query, State, WebSocketUpgrade};
 use axum::http::{Method, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{delete, get, post, put};
 use axum::{Json, Router};
 use sqlx::postgres::PgPoolOptions;
+use std::collections::HashMap;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Mutex};
+use tokio::sync::mpsc::UnboundedSender;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 
@@ -16,10 +18,9 @@ use crate::ws::websocket::handle_ws;
 mod types;
 mod ws;
 
-#[derive(Clone)]
 struct AppState {
     db_pool: sqlx::Pool<sqlx::Postgres>,
-    websockets: Vec<Arc<Mutex<WebSocket>>>,
+    websockets: HashMap<u64, Vec<UnboundedSender<Message>>>,
 }
 
 #[tokio::main]
@@ -44,7 +45,7 @@ async fn main() {
 
     let app_state = Arc::new(Mutex::new(AppState {
         db_pool,
-        websockets: vec![],
+        websockets: HashMap::new(),
     }));
 
     let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
@@ -181,7 +182,7 @@ async fn handle_thumbnail(Query(params): Query<types::ThumbnailParams>) -> impl 
 }
 
 async fn handle_post_profile(State(state): State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
-    let db_pool = state.lock().unwrap().clone().db_pool;
+    let db_pool = state.lock().unwrap().db_pool.clone();
 
     match sqlx::query_as::<_, types::Profile>(
         "INSERT INTO users (username) VALUES (CONCAT('User', nextval('users_id_seq'))) RETURNING id, username"
@@ -204,7 +205,7 @@ async fn handle_get_profile(
     State(state): State<Arc<Mutex<AppState>>>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let db_pool = state.lock().unwrap().clone().db_pool;
+    let db_pool = state.lock().unwrap().db_pool.clone();
 
     let user = sqlx::query_as::<_, types::Profile>("SELECT id, username FROM users WHERE id = $1")
         .bind(id)
@@ -258,7 +259,7 @@ async fn handle_delete_profile(
     State(state): State<Arc<Mutex<AppState>>>,
     Path(id): Path<i32>,
 ) -> impl IntoResponse {
-    let db_pool = state.lock().unwrap().clone().db_pool;
+    let db_pool = state.lock().unwrap().db_pool.clone();
     let result = sqlx::query("DELETE FROM users WHERE id = $1")
         .bind(id)
         .execute(&db_pool)
@@ -275,7 +276,7 @@ async fn handle_delete_profile(
 }
 
 async fn handle_get_profiles(State(state): State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
-    let db_pool = state.lock().unwrap().clone().db_pool;
+    let db_pool = state.lock().unwrap().db_pool.clone();
     let profiles = sqlx::query_as::<_, types::Profile>("SELECT id, username FROM users")
         .fetch_all(&db_pool)
         .await;
@@ -298,7 +299,7 @@ async fn handle_put_watch_state(
     Path(id): Path<i32>,
     Json(payload): Json<types::WatchStateUpdate>,
 ) -> impl IntoResponse {
-    let db_pool = state.lock().unwrap().clone().db_pool;
+    let db_pool = state.lock().unwrap().db_pool.clone();
     let result = sqlx::query(
         "INSERT INTO watched_movies (user_id, movie_path, last_position, finished)
          VALUES ($1, $2, $3, $4)

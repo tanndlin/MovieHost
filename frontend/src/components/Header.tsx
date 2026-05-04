@@ -1,4 +1,4 @@
-import { CogIcon } from '@heroicons/react/24/outline';
+import { CogIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import { useContext } from 'react';
 import AnimatedLink from '../common/AnimatedLink';
 import { StorageContext } from '../contexts/StorageContext';
@@ -32,7 +32,14 @@ const Header = () => {
                     MovieHost
                 </span>
             </AnimatedLink>
+
             <span className="flex items-center gap-4">
+                <AnimatedLink
+                    to="/remote"
+                    className="transition-opacity hover:opacity-75"
+                >
+                    <DevicePhoneMobileIcon className="w-5 h-5 text-blue-400 shrink-0" />
+                </AnimatedLink>
                 {profile && (
                     <AnimatedLink
                         to="/settings"
