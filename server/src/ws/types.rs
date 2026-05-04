@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(tag = "type")]
 pub enum WsClientMessage {
     Control(ControlMessage),
-    Handshake { userId: u64 },
+    Handshake(HandshakeMessage),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -26,4 +26,10 @@ pub enum ControlAction {
     Play,
     Pause,
     Seek { seek: f64 },
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HandshakeMessage {
+    #[serde(rename = "userId")]
+    pub user_id: u64,
 }

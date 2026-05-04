@@ -6,7 +6,7 @@ use tokio::sync::mpsc;
 
 use crate::{
     AppState,
-    ws::types::{ControlMessage, WsClientMessage, WsServerMessage},
+    ws::types::{ControlMessage, HandshakeMessage, WsClientMessage, WsServerMessage},
 };
 
 pub async fn handle_ws(socket: WebSocket, state: Arc<Mutex<AppState>>) {
@@ -29,16 +29,16 @@ pub async fn handle_ws(socket: WebSocket, state: Arc<Mutex<AppState>>) {
             Message::Close(_) => break,
             Message::Text(text) => match serde_json::from_str::<WsClientMessage>(&text) {
                 Ok(client_msg) => match client_msg {
-                    WsClientMessage::Handshake { userId } => {
-                        authed_user_id = Some(userId);
+                    WsClientMessage::Handshake(HandshakeMessage { user_id }) => {
+                        authed_user_id = Some(user_id);
                         state
                             .lock()
                             .unwrap()
                             .websockets
-                            .entry(userId)
+                            .entry(user_id)
                             .or_default()
                             .push(tx.clone());
-                        println!("User {} connected", userId);
+                        println!("User {} connected", user_id);
                     }
                     WsClientMessage::Control(control_message) => {
                         handle_control_message(control_message, &state).await;
@@ -51,7 +51,9 @@ pub async fn handle_ws(socket: WebSocket, state: Arc<Mutex<AppState>>) {
     }
 
     if let Some(user_id) = authed_user_id {
-        state.lock().unwrap().websockets.remove(&user_id);
+        if let Some(senders) = state.lock().unwrap().websockets.get_mut(&user_id) {
+            senders.retain(|sender| !sender.is_closed());
+        }
         println!("User {} disconnected", user_id);
     }
 }

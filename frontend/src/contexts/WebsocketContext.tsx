@@ -38,11 +38,14 @@ export const WebsocketProvider = ({ children }: Props) => {
     const callbacks = useRef<
         Partial<Record<WsServerMessageType, ((msg: WsServerMessage) => void)[]>>
     >({});
+    const shouldReconnect = useRef(true);
 
     useEffect(() => {
+        shouldReconnect.current = true;
         const socket = new WebSocket(`ws://${window.location.host}/ws`);
         setWs(socket);
         return () => {
+            shouldReconnect.current = false;
             socket.close();
         };
     }, []);
@@ -60,7 +63,14 @@ export const WebsocketProvider = ({ children }: Props) => {
             ws.send(JSON.stringify(handshakeMessage));
         };
         ws.onclose = () => {
-            console.log('WebSocket connection closed');
+            if (shouldReconnect.current) {
+                setTimeout(() => {
+                    const socket = new WebSocket(
+                        `ws://${window.location.host}/ws`
+                    );
+                    setWs(socket);
+                }, 2000);
+            }
         };
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
