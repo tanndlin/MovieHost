@@ -81,10 +81,11 @@ async fn main() {
         app
     };
 
-    println!("Server running on 0.0.0.0:{api_port}");
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{api_port}"))
         .await
         .unwrap();
+    let ip = listener.local_addr().unwrap();
+    println!("Server running on http://{ip}");
     axum::serve(listener, app).await.unwrap();
 }
 
