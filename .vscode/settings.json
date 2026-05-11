@@ -5,7 +5,7 @@
                 {
                     "name": "Docker",
                     "commands": [
-                        "docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build -d",
+                        "npm run dev -- --port 3001",
                     ]
                 },
                 {

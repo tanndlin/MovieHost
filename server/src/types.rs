@@ -12,6 +12,11 @@ pub struct Profile {
     pub username: String,
 }
 
+#[derive(Deserialize)]
+pub struct ProfileUpdate {
+    pub username: String,
+}
+
 #[derive(Deserialize, Serialize, FromRow)]
 pub struct WatchState {
     pub movie_path: String,

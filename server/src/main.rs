@@ -57,6 +57,7 @@ async fn main() {
         .route("/api/profile", post(handle_post_profile))
         .route("/api/profiles", get(handle_get_profiles))
         .route("/api/profile/{id}", get(handle_get_profile))
+        .route("/api/profile/{id}", put(handle_put_profile))
         .route("/api/profile/{id}", delete(handle_delete_profile))
         .route("/api/profile/{id}/watch_state", put(handle_put_watch_state))
         .route("/ws", get(ws_handler))
@@ -287,6 +288,28 @@ async fn handle_get_profiles(State(state): State<Arc<Mutex<AppState>>>) -> impl 
             serde_json::to_string(&profiles).unwrap(),
         )
             .into_response(),
+        Err(e) => {
+            eprintln!("Database error: {}", e);
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+async fn handle_put_profile(
+    State(state): State<Arc<Mutex<AppState>>>,
+    Path(id): Path<i32>,
+    Json(payload): Json<types::ProfileUpdate>,
+) -> impl IntoResponse {
+    let db_pool = state.lock().unwrap().db_pool.clone();
+    let result = sqlx::query("UPDATE users SET username = $1 WHERE id = $2")
+        .bind(&payload.username)
+        .bind(id)
+        .execute(&db_pool)
+        .await;
+
+    match result {
+        Ok(r) if r.rows_affected() > 0 => StatusCode::OK.into_response(),
+        Ok(_) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
             eprintln!("Database error: {}", e);
             StatusCode::INTERNAL_SERVER_ERROR.into_response()

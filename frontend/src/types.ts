@@ -56,7 +56,7 @@ export type WatchState = {
 
 export type Profile = {
     id: string;
-    name: string;
+    username: string;
     watch_states: {
         [showName: string]: WatchState;
     };

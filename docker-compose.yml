@@ -21,6 +21,12 @@ services:
 
     server:
         build: ./server
+        develop:
+            watch:
+                - action: rebuild
+                  path: ./server/src
+                - action: rebuild
+                  path: ./server/Cargo.toml
         container_name: movie-host-api
         restart: unless-stopped
         depends_on:
@@ -40,6 +46,13 @@ services:
 
     frontend:
         build: ./frontend
+        develop:
+            watch:
+                - action: sync
+                  path: ./frontend/src
+                  target: /app/src
+                - action: rebuild
+                  path: ./frontend/package.json
         container_name: movie-host-frontend
         restart: unless-stopped
         ports:
