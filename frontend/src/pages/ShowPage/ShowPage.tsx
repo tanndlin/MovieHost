@@ -1,0 +1,121 @@
+import { useContext, useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import AnimatedLink from '../../common/AnimatedLink';
+import useFetch from '../../common/useFetch';
+import { StorageContext } from '../../contexts/StorageContext';
+import { Show } from '../../types';
+import { API_BASE_URL } from '../../utils/env';
+import { parseMediaLibrary } from '../../utils/utils';
+import SeasonDropdown from './SeasonDropdown';
+
+const ShowPage = () => {
+    const { name } = useParams<{ name: string }>();
+    const [show, setShow] = useState<Show | null>(null);
+    const [openSeason, setOpenSeason] = useState<string | null>(null);
+    const { profile } = useContext(StorageContext);
+    const watchStates = profile?.watch_states || {};
+
+    const { loading, error, data } = useFetch<string[]>(`${API_BASE_URL}/ls`);
+
+    // Remove SXXEXX from path to just get the title for thumbnail fetching
+    const path = show?.basePath;
+    const poster =
+        path && `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(path)}`;
+
+    useEffect(() => {
+        if (data) {
+            const lib = parseMediaLibrary(data);
+            const found = lib.shows.find(
+                (s) => s.name === decodeURIComponent(name ?? '')
+            );
+            if (found) {
+                setShow(found);
+                if (found.seasons.length > 0) {
+                    setOpenSeason(found.seasons[0].name);
+                }
+            }
+        }
+    }, [data, name]);
+
+    if (loading) {
+        return (
+            <main className="flex items-center justify-center p-8 min-h-64">
+                <p className="text-lg text-white/60 animate-pulse">
+                    Loading...
+                </p>
+            </main>
+        );
+    }
+
+    if (error || !show) {
+        return (
+            <main className="p-8">
+                <p className="text-red-400">{error || 'Show not found'}</p>
+                <AnimatedLink
+                    to="/"
+                    className="inline-block mt-4 text-gray-400 hover:underline"
+                >
+                    &larr; Back
+                </AnimatedLink>
+            </main>
+        );
+    }
+
+    return (
+        <main className="max-w-screen-lg p-6 mx-auto w-full">
+            <div className="mb-8 flex justify-between">
+                <div>
+                    <AnimatedLink
+                        to="/"
+                        className="inline-flex items-center gap-1.5 text-sm transition-colors text-white/40 hover:text-white/80 mb-4"
+                    >
+                        <svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                        >
+                            <path
+                                d="M19 12H5M5 12l7 7M5 12l7-7"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                        Back to Library
+                    </AnimatedLink>
+                    <h1 className="text-3xl font-bold text-white tracking-tight">
+                        {show.name}
+                    </h1>
+                    <p className="mt-1.5 text-sm text-white/40">
+                        {show.seasons.length} season
+                        {show.seasons.length !== 1 ? 's' : ''} &middot;{' '}
+                        {show.seasons.reduce(
+                            (a, s) => a + s.episodes.length,
+                            0
+                        )}{' '}
+                        episodes
+                    </p>
+                </div>
+                <img id="poster" src={poster} alt="Poster" />
+            </div>
+
+            <div className="flex flex-col gap-2">
+                {show.seasons.map((season) => (
+                    <SeasonDropdown
+                        key={season.name}
+                        {...{
+                            season,
+                            setOpenSeason,
+                            openSeason,
+                            watchStates
+                        }}
+                    />
+                ))}
+            </div>
+        </main>
+    );
+};
+
+export default ShowPage;

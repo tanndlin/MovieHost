@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import AnimatedLink from '../common/AnimatedLink';
 import { WatchState } from '../types';
 import { API_BASE_URL } from '../utils/env';
@@ -15,15 +14,13 @@ type Props = {
 const MediaCard = ({ title, to, subtitle, icon, path, watchState }: Props) => {
     const finished = watchState?.finished;
     const inProgress = !finished && (watchState?.last_position ?? 0) > 0;
-    const [thumbError, setThumbError] = useState(false);
 
     // Remove SXXEXX from path to just get the title for thumbnail fetching
     const cleanPath = path ? path.replace(/S\d{2}E\d{2}/i, '') : null;
 
-    const thumbnailUrl =
-        cleanPath && !thumbError
-            ? `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(cleanPath)}`
-            : null;
+    const thumbnailUrl = cleanPath
+        ? `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(cleanPath)}`
+        : null;
 
     return (
         <AnimatedLink to={to} className="block group">
@@ -37,7 +34,6 @@ const MediaCard = ({ title, to, subtitle, icon, path, watchState }: Props) => {
                             src={thumbnailUrl}
                             alt={title}
                             className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                            onError={() => setThumbError(true)}
                         />
                     ) : (
                         <div className="absolute inset-0 flex items-center justify-center">

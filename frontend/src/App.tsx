@@ -6,7 +6,7 @@ import HomePage from './pages/HomePage';
 import PlayerPage from './pages/PlayerPage';
 import RemotePage from './pages/RemotePage';
 import SettingsPage from './pages/SettingsPage';
-import ShowPage from './pages/ShowPage';
+import ShowPage from './pages/ShowPage/ShowPage';
 
 function App() {
     return (
