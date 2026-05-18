@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import AnimatedLink from '../../common/AnimatedLink';
 import useFetch from '../../common/useFetch';
 import { StorageContext } from '../../contexts/StorageContext';
-import { Show } from '../../types';
+import { Show, ShowDetailsResponse } from '../../types';
 import { API_BASE_URL } from '../../utils/env';
 import { parseMediaLibrary } from '../../utils/utils';
 import SeasonDropdown from './SeasonDropdown';
@@ -17,8 +17,12 @@ const ShowPage = () => {
 
     const { loading, error, data } = useFetch<string[]>(`${API_BASE_URL}/ls`);
 
-    // Remove SXXEXX from path to just get the title for thumbnail fetching
+    // Just get the title for thumbnail fetching
     const path = show?.basePath;
+    const { data: detailsData } = useFetch<ShowDetailsResponse>(
+        path ? `${API_BASE_URL}/details?path=${encodeURIComponent(path)}` : null
+    );
+
     const poster =
         path && `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(path)}`;
 
@@ -63,7 +67,7 @@ const ShowPage = () => {
 
     return (
         <main className="max-w-screen-lg p-6 mx-auto w-full">
-            <div className="mb-8 flex justify-between">
+            <div className="mb-8 flex gap-4 justify-between">
                 <div>
                     <AnimatedLink
                         to="/"
@@ -88,15 +92,17 @@ const ShowPage = () => {
                     <h1 className="text-3xl font-bold text-white tracking-tight">
                         {show.name}
                     </h1>
-                    <p className="mt-1.5 text-sm text-white/40">
+                    <p className="mt-1.5 text-sm text-white/40 mb-4">
                         {show.seasons.length} season
                         {show.seasons.length !== 1 ? 's' : ''} &middot;{' '}
                         {show.seasons.reduce(
                             (a, s) => a + s.episodes.length,
                             0
                         )}{' '}
-                        episodes
+                        episodes &middot; Released on{' '}
+                        {detailsData?.release_date || 'Unknown'}
                     </p>
+                    <p>{detailsData?.overview}</p>
                 </div>
                 <img id="poster" src={poster} alt="Poster" />
             </div>

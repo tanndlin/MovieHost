@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 export default function useFetch<T>(
-    input: URL | RequestInfo,
+    input: URL | RequestInfo | null,
     init?: RequestInit
 ) {
     const [loading, setLoading] = useState(true);
@@ -15,6 +15,11 @@ export default function useFetch<T>(
         setLoading(true);
         setError('');
         setData(null);
+
+        if (input === null) {
+            setLoading(false);
+            return;
+        }
 
         fetch(input, init)
             .then((res) => {

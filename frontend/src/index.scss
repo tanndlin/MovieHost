@@ -56,6 +56,9 @@ input[type='text'] {
 }
 
 #poster {
+  max-width: 45vw;
   width: 200px;
+  height: auto;
+  object-fit: contain; // or cover, depending on what you want
   border-radius: 10px;
 }

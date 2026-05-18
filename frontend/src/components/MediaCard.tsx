@@ -15,8 +15,10 @@ const MediaCard = ({ title, to, subtitle, icon, path, watchState }: Props) => {
     const finished = watchState?.finished;
     const inProgress = !finished && (watchState?.last_position ?? 0) > 0;
 
-    // Remove SXXEXX from path to just get the title for thumbnail fetching
-    const cleanPath = path ? path.replace(/S\d{2}E\d{2}/i, '') : null;
+    // If its a show, just get the parent dir name
+    const split = path?.split('/');
+    const cleanPath =
+        split && split.length > 2 ? split.slice(0, -1).join('/') : path;
 
     const thumbnailUrl = cleanPath
         ? `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(cleanPath)}`

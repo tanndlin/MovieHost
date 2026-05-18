@@ -61,3 +61,8 @@ export type Profile = {
         [showName: string]: WatchState;
     };
 };
+
+export type ShowDetailsResponse = {
+    overview: string;
+    release_date: string;
+};

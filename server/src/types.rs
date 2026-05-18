@@ -33,11 +33,13 @@ pub struct WatchStateUpdate {
 
 #[derive(Deserialize)]
 pub struct TMBDResponse {
-    page: u32,
     pub results: Vec<TMDBMovie>,
 }
 
-#[derive(Deserialize)]
+#[derive(Clone, Deserialize, Serialize)]
 pub struct TMDBMovie {
     pub poster_path: Option<String>,
+    pub overview: Option<String>,
+    #[serde(alias = "first_air_date")]
+    pub release_date: Option<String>,
 }

@@ -17,7 +17,7 @@ use crate::profile::{
     handle_delete_profile, handle_get_profile, handle_get_profiles, handle_post_profile,
     handle_put_profile,
 };
-use crate::types::{TMBDResponse, ThumbnailParams, WatchStateUpdate};
+use crate::types::{TMBDResponse, TMDBMovie, ThumbnailParams, WatchStateUpdate};
 use crate::ws::websocket::handle_ws;
 
 mod profile;
@@ -27,6 +27,7 @@ mod ws;
 struct AppState {
     db_pool: sqlx::Pool<sqlx::Postgres>,
     websockets: HashMap<u64, Vec<UnboundedSender<Message>>>,
+    movie_info_cache: HashMap<String, TMDBMovie>,
 }
 
 #[tokio::main]
@@ -52,6 +53,7 @@ async fn main() {
     let app_state = Arc::new(Mutex::new(AppState {
         db_pool,
         websockets: HashMap::new(),
+        movie_info_cache: HashMap::new(),
     }));
 
     let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
@@ -60,6 +62,7 @@ async fn main() {
     let app = Router::new()
         .route("/api/ls", get(handle_ls))
         .route("/api/thumbnail", get(handle_thumbnail))
+        .route("/api/details", get(handle_details))
         .route("/api/profile", post(handle_post_profile))
         .route("/api/profiles", get(handle_get_profiles))
         .route("/api/profile/{id}", get(handle_get_profile))
@@ -116,20 +119,49 @@ fn path_hash(path: &str) -> u64 {
     h.finish()
 }
 
-async fn handle_thumbnail(Query(params): Query<ThumbnailParams>) -> impl IntoResponse {
-    let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
-    let full_path = format!(
-        "{}/{}",
-        serve_dir.trim_end_matches('/'),
-        params.path.trim_start_matches('/')
-    );
-    let thumb_path = format!("/tmp/thumb_{:x}.jpg", path_hash(&full_path));
+async fn handle_thumbnail(
+    State(state): State<Arc<Mutex<AppState>>>,
+    Query(params): Query<ThumbnailParams>,
+) -> impl IntoResponse {
+    dbg!("Requested thumbnail for path: {}", &params.path);
+
+    let thumb_path = format!("/tmp/thumb_{:x}.jpg", path_hash(&params.path));
 
     if let Ok(bytes) = tokio::fs::read(&thumb_path).await {
         return ([(header::CONTENT_TYPE, "image/jpeg")], bytes).into_response();
     }
 
-    if let Some(bytes) = get_thumbnail_from_tmdb(&params.path).await {
+    // Check movie info cache first
+    let movie_info = {
+        let state_guard = state.lock().unwrap();
+        state_guard.movie_info_cache.get(&params.path).cloned()
+    };
+
+    let movie_info = match movie_info {
+        Some(info) => info,
+        None => {
+            match get_movie_info_from_tmdb(&params.path).await {
+                Some(info) => {
+                    // Cache the movie info
+                    let mut state_guard = state.lock().unwrap();
+                    state_guard
+                        .movie_info_cache
+                        .insert(params.path.clone(), info);
+                    state_guard
+                        .movie_info_cache
+                        .get(&params.path)
+                        .cloned()
+                        .unwrap()
+                }
+                None => {
+                    eprintln!("Movie info not found for path: {}", params.path);
+                    return StatusCode::NOT_FOUND.into_response();
+                }
+            }
+        }
+    };
+
+    if let Some(bytes) = get_thumbnail_from_tmdb(&movie_info).await {
         let _ = tokio::fs::write(&thumb_path, &bytes).await;
         return ([(header::CONTENT_TYPE, "image/jpeg")], bytes).into_response();
     }
@@ -137,7 +169,7 @@ async fn handle_thumbnail(Query(params): Query<ThumbnailParams>) -> impl IntoRes
     StatusCode::NOT_FOUND.into_response()
 }
 
-async fn get_thumbnail_from_tmdb(path: &str) -> Option<Vec<u8>> {
+async fn get_movie_info_from_tmdb(path: &str) -> Option<TMDBMovie> {
     let media_type = if path.to_lowercase().starts_with("movie") {
         "movie"
     } else if path.to_lowercase().starts_with("show") {
@@ -161,9 +193,14 @@ async fn get_thumbnail_from_tmdb(path: &str) -> Option<Vec<u8>> {
     let response = client.get(url).send().await.ok()?;
     let resp_text = response.text().await.ok()?;
     let tmdb_response: TMBDResponse = serde_json::from_str(&resp_text).ok()?;
-    let result = tmdb_response.results.first()?;
-    let poster_path = result.poster_path.as_ref()?;
+    tmdb_response.results.into_iter().next()
+}
+
+async fn get_thumbnail_from_tmdb(movie_info: &TMDBMovie) -> Option<Vec<u8>> {
+    let poster_path = movie_info.poster_path.as_ref()?;
     let poster_url = format!("https://image.tmdb.org/t/p/w500{}", poster_path);
+
+    let client = reqwest::Client::new();
     let poster_response = client.get(&poster_url).send().await.ok()?;
     let poster_bytes = poster_response.bytes().await.ok()?;
     Some(poster_bytes.to_vec())
@@ -195,6 +232,39 @@ async fn handle_put_watch_state(
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
+}
+
+async fn handle_details(
+    State(state): State<Arc<Mutex<AppState>>>,
+    Query(params): Query<ThumbnailParams>,
+) -> impl IntoResponse {
+    let movie_info = {
+        let state_guard = state.lock().unwrap();
+        state_guard.movie_info_cache.get(&params.path).cloned()
+    };
+
+    let movie_info = match movie_info {
+        Some(info) => info,
+        None => {
+            match get_movie_info_from_tmdb(&params.path).await {
+                Some(info) => {
+                    // Cache the movie info
+                    let mut state_guard = state.lock().unwrap();
+                    state_guard
+                        .movie_info_cache
+                        .insert(params.path.clone(), info);
+                    state_guard
+                        .movie_info_cache
+                        .get(&params.path)
+                        .cloned()
+                        .unwrap()
+                }
+                None => return StatusCode::NOT_FOUND.into_response(),
+            }
+        }
+    };
+
+    Json(movie_info).into_response()
 }
 
 async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<Mutex<AppState>>>) -> Response {
