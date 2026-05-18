@@ -75,7 +75,7 @@ const PlayerPage = () => {
             <VideoPlayer
                 ref={playerRef}
                 path={path}
-                title={title || undefined}
+                title={title}
                 startTime={currentWatchState.last_position || undefined}
                 onTimeUpdate={(currentTime, duration) => {
                     currentTimeRef.current = currentTime;

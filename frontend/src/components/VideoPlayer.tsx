@@ -5,7 +5,7 @@ import { WsControlMessage } from '../wsTypes';
 
 type Props = {
     path: string;
-    title?: string;
+    title: string;
     startTime?: number;
     onTimeUpdate?: (currentTime: number, duration: number) => void;
 };
@@ -51,7 +51,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
             }
 
             return () => removeCallback('Control', handleControlMessage);
-        }, [addCallback, ref]);
+        }, [addCallback, removeCallback, ref]);
 
         return (
             <div className="flex flex-col w-full gap-3">
