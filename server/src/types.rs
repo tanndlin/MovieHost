@@ -30,3 +30,14 @@ pub struct WatchStateUpdate {
     pub last_position: f32,
     pub finished: bool,
 }
+
+#[derive(Deserialize)]
+pub struct TMBDResponse {
+    page: u32,
+    pub results: Vec<TMDBMovie>,
+}
+
+#[derive(Deserialize)]
+pub struct TMDBMovie {
+    pub poster_path: Option<String>,
+}

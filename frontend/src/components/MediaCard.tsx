@@ -17,9 +17,12 @@ const MediaCard = ({ title, to, subtitle, icon, path, watchState }: Props) => {
     const inProgress = !finished && (watchState?.last_position ?? 0) > 0;
     const [thumbError, setThumbError] = useState(false);
 
+    // Remove SXXEXX from path to just get the title for thumbnail fetching
+    const cleanPath = path ? path.replace(/S\d{2}E\d{2}/i, '') : null;
+
     const thumbnailUrl =
-        path && !thumbError
-            ? `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(path)}`
+        cleanPath && !thumbError
+            ? `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(cleanPath)}`
             : null;
 
     return (

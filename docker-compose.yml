@@ -43,6 +43,7 @@ services:
             - API_PORT=3000
             - SERVE_DIR=/media
             - DATABASE_URL=postgresql://user:password@db:5432/movie_host
+            - TMDB_API_KEY=${TMDB_API_KEY}
 
     frontend:
         build: ./frontend

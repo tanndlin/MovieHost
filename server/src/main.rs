@@ -17,7 +17,7 @@ use crate::profile::{
     handle_delete_profile, handle_get_profile, handle_get_profiles, handle_post_profile,
     handle_put_profile,
 };
-use crate::types::{ThumbnailParams, WatchStateUpdate};
+use crate::types::{TMBDResponse, ThumbnailParams, WatchStateUpdate};
 use crate::ws::websocket::handle_ws;
 
 mod profile;
@@ -129,64 +129,44 @@ async fn handle_thumbnail(Query(params): Query<ThumbnailParams>) -> impl IntoRes
         return ([(header::CONTENT_TYPE, "image/jpeg")], bytes).into_response();
     }
 
-    let extract_status = tokio::process::Command::new("ffmpeg")
-        .args([
-            "-i",
-            &full_path,
-            "-map",
-            "0:v",
-            "-map",
-            "-0:V",
-            "-c",
-            "copy",
-            "-update",
-            "1",
-            "-y",
-            &thumb_path,
-        ])
-        .stdout(std::process::Stdio::null())
-        .stderr(std::process::Stdio::null())
-        .status()
-        .await;
-
-    let bytes = match extract_status {
-        Ok(s) if s.success() => tokio::fs::read(&thumb_path).await.ok(),
-        _ => None,
-    };
-
-    let bytes = if bytes.is_none() {
-        let status = tokio::process::Command::new("ffmpeg")
-            .args([
-                "-i",
-                &full_path,
-                "-ss",
-                "00:00:10",
-                "-vframes",
-                "1",
-                "-vf",
-                "scale=250:250:force_original_aspect_ratio=decrease",
-                "-update",
-                "1",
-                "-y",
-                &thumb_path,
-            ])
-            .stdout(std::process::Stdio::null())
-            .stderr(std::process::Stdio::null())
-            .status()
-            .await;
-
-        match status {
-            Ok(s) if s.success() => tokio::fs::read(&thumb_path).await.ok(),
-            _ => None,
-        }
-    } else {
-        bytes
-    };
-
-    match bytes {
-        Some(b) => ([(header::CONTENT_TYPE, "image/jpeg")], b).into_response(),
-        None => StatusCode::NOT_FOUND.into_response(),
+    if let Some(bytes) = get_thumbnail_from_tmdb(&params.path).await {
+        let _ = tokio::fs::write(&thumb_path, &bytes).await;
+        return ([(header::CONTENT_TYPE, "image/jpeg")], bytes).into_response();
     }
+
+    StatusCode::NOT_FOUND.into_response()
+}
+
+async fn get_thumbnail_from_tmdb(path: &str) -> Option<Vec<u8>> {
+    let media_type = if path.to_lowercase().starts_with("movie") {
+        "movie"
+    } else if path.to_lowercase().starts_with("show") {
+        "tv"
+    } else {
+        return None;
+    };
+
+    let filename = path.rsplit('/').next().unwrap_or(path);
+    let title = filename.split('.').next().unwrap_or(filename);
+
+    let tmdb_api_key =
+        std::env::var("TMDB_API_KEY").expect("TMDB_API_KEY environment variable not set");
+    let client = reqwest::Client::new();
+    let url = reqwest::Url::parse_with_params(
+        format!("https://api.themoviedb.org/3/search/{media_type}").as_str(),
+        &[("api_key", tmdb_api_key.as_str()), ("query", title)],
+    )
+    .unwrap();
+
+    let response = client.get(url).send().await.ok()?;
+    let resp_text = response.text().await.ok()?;
+    let tmdb_response: TMBDResponse = serde_json::from_str(&resp_text).ok()?;
+    let result = tmdb_response.results.first()?;
+    let poster_path = result.poster_path.as_ref()?;
+    let poster_url = format!("https://image.tmdb.org/t/p/w500{}", poster_path);
+    let poster_response = client.get(&poster_url).send().await.ok()?;
+    let poster_bytes = poster_response.bytes().await.ok()?;
+    Some(poster_bytes.to_vec())
 }
 
 async fn handle_put_watch_state(
