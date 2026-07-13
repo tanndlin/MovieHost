@@ -80,6 +80,14 @@ export const StorageProvider = ({ children }: Props) => {
             return;
         }
 
+        setProfile({
+            ...profile,
+            watch_states: {
+                ...profile.watch_states,
+                [path]: ws
+            }
+        });
+
         fetch(`/api/profile/${id}/watch_state`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
