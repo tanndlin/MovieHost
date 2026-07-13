@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import AnimatedLink from '../../common/AnimatedLink';
 import useFetch from '../../common/useFetch';
@@ -14,6 +14,8 @@ const ShowPage = () => {
     const [openSeason, setOpenSeason] = useState<string | null>(null);
     const { profile } = useContext(StorageContext);
     const watchStates = profile?.watch_states || {};
+    const watchStatesRef = useRef(watchStates);
+    watchStatesRef.current = watchStates;
 
     const { loading, error, data } = useFetch<string[]>(`${API_BASE_URL}/ls`);
 
@@ -34,9 +36,14 @@ const ShowPage = () => {
             );
             if (found) {
                 setShow(found);
-                if (found.seasons.length > 0) {
-                    setOpenSeason(found.seasons[0].name);
-                }
+                const currentWatchStates = watchStatesRef.current;
+                const firstUnwatched = found.seasons.find(
+                    (s) =>
+                        !s.episodes.every(
+                            (ep) => currentWatchStates[ep.path]?.finished
+                        )
+                );
+                setOpenSeason(firstUnwatched?.name ?? null);
             }
         }
     }, [data, name]);
