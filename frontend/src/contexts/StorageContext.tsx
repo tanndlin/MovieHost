@@ -6,13 +6,15 @@ type IStorage = {
     setID: (id: number | undefined) => void;
     profile?: Profile;
     setWatchState: (path: string, ws: WatchState) => void;
+    unwatchPaths: (paths: string[]) => void;
 };
 
 const defaultState: IStorage = {
     id: 0,
     setID: () => {},
     profile: undefined,
-    setWatchState: () => {}
+    setWatchState: () => {},
+    unwatchPaths: () => {}
 };
 
 type Props = {
@@ -80,13 +82,17 @@ export const StorageProvider = ({ children }: Props) => {
             return;
         }
 
-        setProfile({
-            ...profile,
-            watch_states: {
-                ...profile.watch_states,
-                [path]: ws
-            }
-        });
+        setProfile((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      watch_states: {
+                          ...prev.watch_states,
+                          [path]: ws
+                      }
+                  }
+                : prev
+        );
 
         fetch(`/api/profile/${id}/watch_state`, {
             method: 'PUT',
@@ -99,11 +105,48 @@ export const StorageProvider = ({ children }: Props) => {
         }).catch((err) => console.error(err));
     };
 
+    const unwatchPaths = (paths: string[]) => {
+        if (!profile || paths.length === 0) {
+            return;
+        }
+
+        const resetStates: Record<string, WatchState> = {};
+        for (const path of paths) {
+            resetStates[path] = {
+                movie_path: path,
+                last_position: 0,
+                finished: false
+            };
+        }
+
+        setProfile((prev) =>
+            prev
+                ? {
+                      ...prev,
+                      watch_states: { ...prev.watch_states, ...resetStates }
+                  }
+                : prev
+        );
+
+        for (const path of paths) {
+            fetch(`/api/profile/${id}/watch_state`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    movie_path: path,
+                    last_position: 0,
+                    finished: false
+                })
+            }).catch((err) => console.error(err));
+        }
+    };
+
     const state: IStorage = {
         id: id!,
         setID,
         profile,
-        setWatchState
+        setWatchState,
+        unwatchPaths
     };
 
     return (

@@ -3,19 +3,44 @@ import { useParams } from 'react-router-dom';
 import AnimatedLink from '../../common/AnimatedLink';
 import useFetch from '../../common/useFetch';
 import { StorageContext } from '../../contexts/StorageContext';
-import { Show, ShowDetailsResponse } from '../../types';
+import { Season, Show, ShowDetailsResponse } from '../../types';
 import { API_BASE_URL } from '../../utils/env';
-import { parseMediaLibrary } from '../../utils/utils';
+import { hasWatchProgress, parseMediaLibrary } from '../../utils/utils';
 import SeasonDropdown from './SeasonDropdown';
 
 const ShowPage = () => {
     const { name } = useParams<{ name: string }>();
     const [show, setShow] = useState<Show | null>(null);
     const [openSeason, setOpenSeason] = useState<string | null>(null);
-    const { profile } = useContext(StorageContext);
+    const { profile, setWatchState, unwatchPaths } = useContext(StorageContext);
     const watchStates = profile?.watch_states || {};
     const watchStatesRef = useRef(watchStates);
     watchStatesRef.current = watchStates;
+
+    const handleUnwatchEpisode = (path: string) => {
+        setWatchState(path, {
+            movie_path: path,
+            last_position: 0,
+            finished: false
+        });
+    };
+
+    const handleUnwatchSeason = (season: Season) => {
+        unwatchPaths(season.episodes.map((ep) => ep.path));
+    };
+
+    const handleUnwatchShow = () => {
+        if (!show) {
+            return;
+        }
+        unwatchPaths(
+            show.seasons.flatMap((s) => s.episodes.map((ep) => ep.path))
+        );
+    };
+
+    const showHasProgress = show?.seasons.some((s) =>
+        s.episodes.some((ep) => hasWatchProgress(watchStates[ep.path]))
+    );
 
     const { loading, error, data } = useFetch<string[]>(`${API_BASE_URL}/ls`);
 
@@ -96,9 +121,20 @@ const ShowPage = () => {
                         </svg>
                         Back to Library
                     </AnimatedLink>
-                    <h1 className="text-3xl font-bold text-white tracking-tight">
-                        {show.name}
-                    </h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-3xl font-bold text-white tracking-tight">
+                            {show.name}
+                        </h1>
+                        {showHasProgress && (
+                            <button
+                                onClick={handleUnwatchShow}
+                                title="Mark entire show as unwatched"
+                                className="text-xs font-medium text-white/40 transition-colors hover:text-red-400"
+                            >
+                                Mark unwatched
+                            </button>
+                        )}
+                    </div>
                     <p className="mt-1.5 text-sm text-white/40 mb-4">
                         {show.seasons.length} season
                         {show.seasons.length !== 1 ? 's' : ''} &middot;{' '}
@@ -122,7 +158,9 @@ const ShowPage = () => {
                             season,
                             setOpenSeason,
                             openSeason,
-                            watchStates
+                            watchStates,
+                            onUnwatchEpisode: handleUnwatchEpisode,
+                            onUnwatchSeason: handleUnwatchSeason
                         }}
                     />
                 ))}

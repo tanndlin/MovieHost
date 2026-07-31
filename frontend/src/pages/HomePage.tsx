@@ -4,24 +4,28 @@ import MediaCard from '../components/MediaCard';
 import { StorageContext } from '../contexts/StorageContext';
 import { WatchState, type MediaLibrary, type Show } from '../types';
 import { API_BASE_URL } from '../utils/env';
-import { parseMediaLibrary } from '../utils/utils';
+import { hasWatchProgress, parseMediaLibrary } from '../utils/utils';
 
 function showWatchProgress(
     show: Show,
     watchStates: Record<string, WatchState>
-): { watched: number; total: number } {
+): { watched: number; total: number; anyProgress: boolean } {
     const episodes = show.seasons.flatMap((s) => s.episodes);
     const watched = episodes.filter(
         (ep) => watchStates[ep.path]?.finished
     ).length;
-    return { watched, total: episodes.length };
+    const anyProgress = episodes.some((ep) =>
+        hasWatchProgress(watchStates[ep.path])
+    );
+    return { watched, total: episodes.length, anyProgress };
 }
 
 const HomePage = () => {
     const [library, setLibrary] = useState<MediaLibrary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
-    const { id, profile } = useContext(StorageContext);
+    const { id, profile, setWatchState, unwatchPaths } =
+        useContext(StorageContext);
     const watchStates = profile?.watch_states || {};
 
     useEffect(() => {
@@ -78,10 +82,8 @@ const HomePage = () => {
                     </h2>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                         {shows.map((show) => {
-                            const { watched, total } = showWatchProgress(
-                                show,
-                                watchStates
-                            );
+                            const { watched, total, anyProgress } =
+                                showWatchProgress(show, watchStates);
                             const seasonCount = show.seasons.length;
                             const seasonLabel = `${seasonCount} season${seasonCount !== 1 ? 's' : ''}`;
                             const progressLabel =
@@ -109,7 +111,7 @@ const HomePage = () => {
                                                           ?.episodes[0]?.path ||
                                                       ''
                                               }
-                                            : watched > 0
+                                            : anyProgress
                                               ? {
                                                     last_position: 1,
                                                     finished: false,
@@ -119,6 +121,20 @@ const HomePage = () => {
                                                             ?.path || ''
                                                 }
                                               : undefined
+                                    }
+                                    onUnwatch={
+                                        anyProgress
+                                            ? () =>
+                                                  unwatchPaths(
+                                                      show.seasons.flatMap(
+                                                          (s) =>
+                                                              s.episodes.map(
+                                                                  (ep) =>
+                                                                      ep.path
+                                                              )
+                                                      )
+                                                  )
+                                            : undefined
                                     }
                                 />
                             );
@@ -142,6 +158,16 @@ const HomePage = () => {
                                 icon="🎬"
                                 path={movie.path}
                                 watchState={watchStates[movie.path]}
+                                onUnwatch={
+                                    hasWatchProgress(watchStates[movie.path])
+                                        ? () =>
+                                              setWatchState(movie.path, {
+                                                  movie_path: movie.path,
+                                                  last_position: 0,
+                                                  finished: false
+                                              })
+                                        : undefined
+                                }
                             />
                         ))}
                     </div>
@@ -163,6 +189,16 @@ const HomePage = () => {
                                 icon="📄"
                                 path={file.path}
                                 watchState={watchStates[file.path]}
+                                onUnwatch={
+                                    hasWatchProgress(watchStates[file.path])
+                                        ? () =>
+                                              setWatchState(file.path, {
+                                                  movie_path: file.path,
+                                                  last_position: 0,
+                                                  finished: false
+                                              })
+                                        : undefined
+                                }
                             />
                         ))}
                     </div>

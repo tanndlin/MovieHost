@@ -79,6 +79,13 @@ export function parseMediaLibrary(paths: string[]): MediaLibrary {
     return { shows, movies, other };
 }
 
+export function hasWatchProgress(ws?: {
+    finished: boolean;
+    last_position: number;
+}): boolean {
+    return !!ws?.finished || (ws?.last_position ?? 0) > 0;
+}
+
 export function isVideoFile(path: string): boolean {
     const ext = path.split('.').pop()?.toLowerCase() ?? '';
     return VIDEO_EXTENSIONS.has(ext);
