@@ -5,60 +5,60 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap');
 
 body {
-  margin: 0;
-  font-family: 'Inter', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: white;
-  background: #0b0b0f;
-  background-attachment: fixed;
-  min-height: 100vh;
+    margin: 0;
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    color: white;
+    background: #0b0b0f;
+    background-attachment: fixed;
+    min-height: 100vh;
 }
 
 code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+    font-family:
+        source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
 }
 
 button {
-  @apply bg-accent;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  padding: 5px 10px;
-  cursor: pointer;
+    @apply bg-accent;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 5px 10px;
+    cursor: pointer;
 
-  &:hover {
-    @apply bg-secondary;
-  }
+    &:hover {
+        @apply bg-secondary;
+    }
 }
 
 input[type='text'] {
-  @apply rounded-md text-black;
+    @apply rounded-md text-black;
 }
 
 // Scroll bars
 ::-webkit-scrollbar {
-  width: 6px;
+    width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.03);
+    background: rgba(255, 255, 255, 0.03);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 3px;
+    background: rgba(255, 255, 255, 0.12);
+    border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.25);
 }
 
 #poster {
-  max-width: 45vw;
-  width: 200px;
-  height: auto;
-  object-fit: contain; // or cover, depending on what you want
-  border-radius: 10px;
+    max-width: 45vw;
+    width: 200px;
+    height: auto;
+    object-fit: contain; // or cover, depending on what you want
+    border-radius: 10px;
 }

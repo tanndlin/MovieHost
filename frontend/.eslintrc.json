@@ -10,9 +10,7 @@
         "plugin:@typescript-eslint/recommended",
         "plugin:prettier/recommended"
     ],
-    "ignorePatterns": [
-        "src/proto/**/*.ts"
-    ],
+    "ignorePatterns": ["src/proto/**/*.ts"],
     "parser": "@typescript-eslint/parser",
     "parserOptions": {
         "ecmaVersion": "latest",
@@ -21,11 +19,7 @@
             "jsx": true
         }
     },
-    "plugins": [
-        "react",
-        "react-hooks",
-        "@typescript-eslint"
-    ],
+    "plugins": ["react", "react-hooks", "@typescript-eslint"],
     "settings": {
         "react": {
             "version": "detect"
@@ -33,13 +27,8 @@
     },
     "rules": {
         "import/no-unresolved": 0,
-        "eqeqeq": [
-            "error",
-            "smart"
-        ],
-        "eol-last": [
-            "error"
-        ],
+        "eqeqeq": ["error", "smart"],
+        "eol-last": ["error"],
         "curly": "warn",
         "no-var": 2,
         "prefer-const": "error",
