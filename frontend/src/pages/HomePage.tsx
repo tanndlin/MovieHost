@@ -1,5 +1,6 @@
+import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import MediaCard from '../components/MediaCard';
 import { StorageContext } from '../contexts/StorageContext';
 import { WatchState, type MediaLibrary, type Show } from '../types';
@@ -24,6 +25,7 @@ const HomePage = () => {
     const [library, setLibrary] = useState<MediaLibrary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [query, setQuery] = useState('');
     const { id, profile, setWatchState, unwatchPaths } =
         useContext(StorageContext);
     const watchStates = profile?.watch_states || {};
@@ -41,6 +43,28 @@ const HomePage = () => {
             .catch(() => setError('Failed to load media library'))
             .finally(() => setLoading(false));
     }, [id]);
+
+    const normalizedQuery = query.trim().toLowerCase();
+    const filtered = useMemo(() => {
+        if (!library) {
+            return { shows: [], movies: [], other: [] };
+        }
+        if (!normalizedQuery) {
+            return library;
+        }
+
+        return {
+            shows: library.shows.filter((show) =>
+                show.name.toLowerCase().includes(normalizedQuery)
+            ),
+            movies: library.movies.filter((movie) =>
+                movie.name.toLowerCase().includes(normalizedQuery)
+            ),
+            other: library.other.filter((file) =>
+                file.name.toLowerCase().includes(normalizedQuery)
+            )
+        };
+    }, [library, normalizedQuery]);
 
     if (id === undefined) {
         return (
@@ -70,10 +94,37 @@ const HomePage = () => {
         );
     }
 
-    const { shows, movies, other } = library!;
+    const { shows: allShows, movies: allMovies, other: allOther } = library!;
+    const { shows, movies, other } = filtered;
+    const hasLibrary =
+        allShows.length > 0 || allMovies.length > 0 || allOther.length > 0;
+    const hasResults =
+        shows.length > 0 || movies.length > 0 || other.length > 0;
 
     return (
         <main className="max-w-screen-xl p-6 mx-auto w-full">
+            {hasLibrary && (
+                <div className="relative mb-8 max-w-md">
+                    <MagnifyingGlassIcon className="absolute w-4 h-4 -translate-y-1/2 pointer-events-none left-3 top-1/2 text-white/40" />
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search your library..."
+                        className="w-full py-2 pl-9 pr-9 text-sm !text-white placeholder-white/40 bg-white/5 border rounded-lg outline-none border-white/10 focus:border-white/25"
+                    />
+                    {query && (
+                        <button
+                            onClick={() => setQuery('')}
+                            title="Clear search"
+                            className="absolute -translate-y-1/2 right-3 top-1/2 text-white/40 hover:text-white/80"
+                        >
+                            <XMarkIcon className="w-4 h-4" />
+                        </button>
+                    )}
+                </div>
+            )}
+
             {shows.length > 0 && (
                 <section className="mb-10">
                     <h2 className="flex items-center gap-2.5 mb-5 text-xl font-bold text-white">
@@ -205,17 +256,25 @@ const HomePage = () => {
                 </section>
             )}
 
-            {shows.length === 0 &&
-                movies.length === 0 &&
-                other.length === 0 && (
-                    <div className="flex flex-col items-center justify-center py-24 text-white/40">
-                        <span className="mb-4 text-6xl">📂</span>
-                        <p className="text-lg">No media found</p>
-                        <p className="mt-1 text-sm">
-                            Make sure your media volume is mounted correctly
-                        </p>
-                    </div>
-                )}
+            {!hasResults && hasLibrary && (
+                <div className="flex flex-col items-center justify-center py-24 text-white/40">
+                    <span className="mb-4 text-6xl">🔍</span>
+                    <p className="text-lg">
+                        No results for &quot;{query}&quot;
+                    </p>
+                    <p className="mt-1 text-sm">Try a different search term</p>
+                </div>
+            )}
+
+            {!hasLibrary && (
+                <div className="flex flex-col items-center justify-center py-24 text-white/40">
+                    <span className="mb-4 text-6xl">📂</span>
+                    <p className="text-lg">No media found</p>
+                    <p className="mt-1 text-sm">
+                        Make sure your media volume is mounted correctly
+                    </p>
+                </div>
+            )}
         </main>
     );
 };

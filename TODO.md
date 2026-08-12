@@ -2,7 +2,7 @@
 
 ## Quick wins
 - [ ] Continue Watching row on HomePage (sorted by recency, using existing watch state)
-- [ ] Search/filter bar for the library
+- [x] Search/filter bar for the library
 - [ ] Auto-play next episode when one finishes
 - [ ] Subtitle tracks in VideoPlayer (.srt/.vtt sidecar support)
 
