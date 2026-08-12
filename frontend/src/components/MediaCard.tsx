@@ -11,6 +11,8 @@ type Props = {
     path?: string;
     watchState?: WatchState;
     onUnwatch?: () => void;
+    /** Shared view-transition name to morph this card's poster into a hero image on the destination page. */
+    posterName?: string;
 };
 
 const MediaCard = ({
@@ -20,7 +22,8 @@ const MediaCard = ({
     icon,
     path,
     watchState,
-    onUnwatch
+    onUnwatch,
+    posterName
 }: Props) => {
     const finished = watchState?.finished;
     const inProgress = !finished && (watchState?.last_position ?? 0) > 0;
@@ -38,38 +41,40 @@ const MediaCard = ({
         <ViewTransition enter="media-card-enter" exit="media-card-exit">
             <div className="relative group">
                 <Link to={to} className="block">
-                    <div className="relative overflow-hidden rounded-xl cursor-pointer ring-1 ring-white/10 shadow-lg transition-all duration-300 group-hover:ring-white/25 group-hover:shadow-2xl group-hover:shadow-black/70">
-                        <div className="aspect-[2/3] relative bg-gradient-to-br from-gray-800 to-gray-900">
-                            {thumbnailUrl ? (
-                                <img
-                                    src={thumbnailUrl}
-                                    alt={title}
-                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                />
-                            ) : (
-                                <div className="absolute inset-0 flex items-center justify-center">
-                                    <span className="text-5xl opacity-50">
-                                        {icon ?? '🎬'}
-                                    </span>
-                                </div>
-                            )}
-
-                            {/* Bottom gradient overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
-
-                            {/* Title overlay */}
-                            <div className="absolute bottom-0 left-0 right-0 p-3">
-                                <p className="text-sm font-semibold text-white truncate leading-snug">
-                                    {title}
-                                </p>
-                                {subtitle && (
-                                    <p className="text-xs text-white/55 mt-0.5 truncate">
-                                        {subtitle}
-                                    </p>
+                    <ViewTransition name={posterName ?? 'auto'}>
+                        <div className="relative overflow-hidden rounded-xl cursor-pointer ring-1 ring-white/10 shadow-lg transition-all duration-300 group-hover:ring-white/25 group-hover:shadow-2xl group-hover:shadow-black/70">
+                            <div className="aspect-[2/3] relative bg-gradient-to-br from-gray-800 to-gray-900">
+                                {thumbnailUrl ? (
+                                    <img
+                                        src={thumbnailUrl}
+                                        alt={title}
+                                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                                    />
+                                ) : (
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <span className="text-5xl opacity-50">
+                                            {icon ?? '🎬'}
+                                        </span>
+                                    </div>
                                 )}
+
+                                {/* Bottom gradient overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/20 to-transparent" />
+
+                                {/* Title overlay */}
+                                <div className="absolute bottom-0 left-0 right-0 p-3">
+                                    <p className="text-sm font-semibold text-white truncate leading-snug">
+                                        {title}
+                                    </p>
+                                    {subtitle && (
+                                        <p className="text-xs text-white/55 mt-0.5 truncate">
+                                            {subtitle}
+                                        </p>
+                                    )}
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </ViewTransition>
                 </Link>
 
                 {/* Status badge - kept outside the <a> so it isn't nested

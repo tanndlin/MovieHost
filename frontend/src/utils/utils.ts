@@ -79,6 +79,10 @@ export function parseMediaLibrary(paths: string[]): MediaLibrary {
     return { shows, movies, other };
 }
 
+export function posterTransitionName(showName: string): string {
+    return `show-poster-${showName.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
+}
+
 export function hasWatchProgress(ws?: {
     finished: boolean;
     last_position: number;

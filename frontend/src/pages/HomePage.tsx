@@ -11,7 +11,11 @@ import MediaCard from '../components/MediaCard';
 import { StorageContext } from '../contexts/StorageContext';
 import { WatchState, type MediaLibrary, type Show } from '../types';
 import { API_BASE_URL } from '../utils/env';
-import { hasWatchProgress, parseMediaLibrary } from '../utils/utils';
+import {
+    hasWatchProgress,
+    parseMediaLibrary,
+    posterTransitionName
+} from '../utils/utils';
 
 function showWatchProgress(
     show: Show,
@@ -163,6 +167,7 @@ const HomePage = () => {
                                     title={show.name}
                                     subtitle={`${seasonLabel}${progressLabel}`}
                                     icon="📺"
+                                    posterName={posterTransitionName(show.name)}
                                     path={
                                         show.seasons[0]?.episodes[0]?.path || ''
                                     }

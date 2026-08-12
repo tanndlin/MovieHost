@@ -1,14 +1,20 @@
+import { ViewTransition } from 'react';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import useFetch from '../../common/useFetch';
 import { StorageContext } from '../../contexts/StorageContext';
 import { Season, Show, ShowDetailsResponse } from '../../types';
 import { API_BASE_URL } from '../../utils/env';
-import { hasWatchProgress, parseMediaLibrary } from '../../utils/utils';
+import {
+    hasWatchProgress,
+    parseMediaLibrary,
+    posterTransitionName
+} from '../../utils/utils';
 import SeasonDropdown from './SeasonDropdown';
 
 const ShowPage = () => {
     const { name } = useParams<{ name: string }>();
+    const showName = decodeURIComponent(name ?? '');
     const [show, setShow] = useState<Show | null>(null);
     const [openSeason, setOpenSeason] = useState<string | null>(null);
     const { profile, setWatchState, unwatchPaths } = useContext(StorageContext);
@@ -43,21 +49,20 @@ const ShowPage = () => {
 
     const { loading, error, data } = useFetch<string[]>(`${API_BASE_URL}/ls`);
 
-    // Just get the title for thumbnail fetching
-    const path = show?.basePath;
+    // Derived directly from the route param so the poster can render (and
+    // participate in the view transition) before the library fetch resolves.
+    const basePath = `Shows/${showName}`;
     const { data: detailsData } = useFetch<ShowDetailsResponse>(
-        path ? `${API_BASE_URL}/details?path=${encodeURIComponent(path)}` : null
+        showName
+            ? `${API_BASE_URL}/details?path=${encodeURIComponent(basePath)}`
+            : null
     );
-
-    const poster =
-        path && `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(path)}`;
+    const poster = `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(basePath)}`;
 
     useEffect(() => {
         if (data) {
             const lib = parseMediaLibrary(data);
-            const found = lib.shows.find(
-                (s) => s.name === decodeURIComponent(name ?? '')
-            );
+            const found = lib.shows.find((s) => s.name === showName);
             if (found) {
                 setShow(found);
                 const currentWatchStates = watchStatesRef.current;
@@ -70,31 +75,7 @@ const ShowPage = () => {
                 setOpenSeason(firstUnwatched?.name ?? null);
             }
         }
-    }, [data, name]);
-
-    if (loading) {
-        return (
-            <main className="flex items-center justify-center p-8 min-h-64">
-                <p className="text-lg text-white/60 animate-pulse">
-                    Loading...
-                </p>
-            </main>
-        );
-    }
-
-    if (error || !show) {
-        return (
-            <main className="p-8">
-                <p className="text-red-400">{error || 'Show not found'}</p>
-                <Link
-                    to="/"
-                    className="inline-block mt-4 text-gray-400 hover:underline"
-                >
-                    &larr; Back
-                </Link>
-            </main>
-        );
-    }
+    }, [data, showName]);
 
     return (
         <main className="max-w-screen-lg p-6 mx-auto w-full">
@@ -122,7 +103,7 @@ const ShowPage = () => {
                     </Link>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold text-white tracking-tight">
-                            {show.name}
+                            {show?.name ?? showName}
                         </h1>
                         {showHasProgress && (
                             <button
@@ -134,36 +115,50 @@ const ShowPage = () => {
                             </button>
                         )}
                     </div>
-                    <p className="mt-1.5 text-sm text-white/40 mb-4">
-                        {show.seasons.length} season
-                        {show.seasons.length !== 1 ? 's' : ''} &middot;{' '}
-                        {show.seasons.reduce(
-                            (a, s) => a + s.episodes.length,
-                            0
-                        )}{' '}
-                        episodes &middot; Released on{' '}
-                        {detailsData?.release_date || 'Unknown'}
-                    </p>
+                    {show && (
+                        <p className="mt-1.5 text-sm text-white/40 mb-4">
+                            {show.seasons.length} season
+                            {show.seasons.length !== 1 ? 's' : ''} &middot;{' '}
+                            {show.seasons.reduce(
+                                (a, s) => a + s.episodes.length,
+                                0
+                            )}{' '}
+                            episodes &middot; Released on{' '}
+                            {detailsData?.release_date || 'Unknown'}
+                        </p>
+                    )}
                     <p>{detailsData?.overview}</p>
                 </div>
-                <img id="poster" src={poster} alt="Poster" />
+                <ViewTransition name={posterTransitionName(showName)}>
+                    <img id="poster" src={poster} alt="Poster" />
+                </ViewTransition>
             </div>
 
-            <div className="flex flex-col gap-2">
-                {show.seasons.map((season) => (
-                    <SeasonDropdown
-                        key={season.name}
-                        {...{
-                            season,
-                            setOpenSeason,
-                            openSeason,
-                            watchStates,
-                            onUnwatchEpisode: handleUnwatchEpisode,
-                            onUnwatchSeason: handleUnwatchSeason
-                        }}
-                    />
-                ))}
-            </div>
+            {loading ? (
+                <p className="text-lg text-white/60 animate-pulse">
+                    Loading...
+                </p>
+            ) : error ? (
+                <p className="text-red-400">{error}</p>
+            ) : !show ? (
+                <p className="text-red-400">Show not found</p>
+            ) : (
+                <div className="flex flex-col gap-2">
+                    {show.seasons.map((season) => (
+                        <SeasonDropdown
+                            key={season.name}
+                            {...{
+                                season,
+                                setOpenSeason,
+                                openSeason,
+                                watchStates,
+                                onUnwatchEpisode: handleUnwatchEpisode,
+                                onUnwatchSeason: handleUnwatchSeason
+                            }}
+                        />
+                    ))}
+                </div>
+            )}
         </main>
     );
 };
