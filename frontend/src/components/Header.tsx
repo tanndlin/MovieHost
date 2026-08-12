@@ -1,6 +1,6 @@
 import { CogIcon, DevicePhoneMobileIcon } from '@heroicons/react/24/outline';
 import { useContext } from 'react';
-import AnimatedLink from '../common/AnimatedLink';
+import { Link } from 'react-router-dom';
 import { StorageContext } from '../contexts/StorageContext';
 import ProfileSelector from './ProfileSelector';
 
@@ -9,7 +9,7 @@ const Header = () => {
 
     return (
         <header className="sticky top-0 z-50 flex justify-between gap-4 px-6 py-4 border-b bg-black/70 backdrop-blur-xl border-white/10">
-            <AnimatedLink
+            <Link
                 to="/"
                 className="flex items-center gap-2.5 transition-opacity hover:opacity-75"
             >
@@ -31,22 +31,22 @@ const Header = () => {
                 <span className="text-lg font-bold tracking-tight text-white">
                     MovieHost
                 </span>
-            </AnimatedLink>
+            </Link>
 
             <span className="flex items-center gap-4">
-                <AnimatedLink
+                <Link
                     to="/remote"
                     className="transition-opacity hover:opacity-75"
                 >
                     <DevicePhoneMobileIcon className="w-5 h-5 text-blue-400 shrink-0" />
-                </AnimatedLink>
+                </Link>
                 {profile && (
-                    <AnimatedLink
+                    <Link
                         to="/settings"
                         className="ml-auto transition-opacity hover:opacity-75"
                     >
                         <CogIcon className="w-5 h-5 text-gray-400" />
-                    </AnimatedLink>
+                    </Link>
                 )}
                 <ProfileSelector />
             </span>

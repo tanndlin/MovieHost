@@ -1,3 +1,4 @@
+import { ViewTransition } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
 import { StorageProvider } from './contexts/StorageContext';
@@ -12,19 +13,30 @@ function App() {
     return (
         <StorageProvider>
             <WebsocketProvider>
-                <BrowserRouter>
+                <BrowserRouter future={{ v7_startTransition: true }}>
                     <div className="flex flex-col min-h-screen">
                         <Header />
-                        <Routes>
-                            <Route path="/" element={<HomePage />} />
-                            <Route path="/show/:name" element={<ShowPage />} />
-                            <Route path="/player" element={<PlayerPage />} />
-                            <Route
-                                path="/settings"
-                                element={<SettingsPage />}
-                            />
-                            <Route path="/remote" element={<RemotePage />} />
-                        </Routes>
+                        <ViewTransition>
+                            <Routes>
+                                <Route path="/" element={<HomePage />} />
+                                <Route
+                                    path="/show/:name"
+                                    element={<ShowPage />}
+                                />
+                                <Route
+                                    path="/player"
+                                    element={<PlayerPage />}
+                                />
+                                <Route
+                                    path="/settings"
+                                    element={<SettingsPage />}
+                                />
+                                <Route
+                                    path="/remote"
+                                    element={<RemotePage />}
+                                />
+                            </Routes>
+                        </ViewTransition>
                     </div>
                 </BrowserRouter>
             </WebsocketProvider>

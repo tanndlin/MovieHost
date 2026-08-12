@@ -1,6 +1,5 @@
 import { useContext, useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
-import AnimatedLink from '../../common/AnimatedLink';
+import { Link, useParams } from 'react-router-dom';
 import useFetch from '../../common/useFetch';
 import { StorageContext } from '../../contexts/StorageContext';
 import { Season, Show, ShowDetailsResponse } from '../../types';
@@ -87,12 +86,12 @@ const ShowPage = () => {
         return (
             <main className="p-8">
                 <p className="text-red-400">{error || 'Show not found'}</p>
-                <AnimatedLink
+                <Link
                     to="/"
                     className="inline-block mt-4 text-gray-400 hover:underline"
                 >
                     &larr; Back
-                </AnimatedLink>
+                </Link>
             </main>
         );
     }
@@ -101,7 +100,7 @@ const ShowPage = () => {
         <main className="max-w-screen-lg p-6 mx-auto w-full">
             <div className="mb-8 flex gap-4 justify-between">
                 <div>
-                    <AnimatedLink
+                    <Link
                         to="/"
                         className="inline-flex items-center gap-1.5 text-sm transition-colors text-white/40 hover:text-white/80 mb-4"
                     >
@@ -120,7 +119,7 @@ const ShowPage = () => {
                             />
                         </svg>
                         Back to Library
-                    </AnimatedLink>
+                    </Link>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl font-bold text-white tracking-tight">
                             {show.name}

@@ -62,3 +62,26 @@ input[type='text'] {
     object-fit: contain; // or cover, depending on what you want
     border-radius: 10px;
 }
+
+// Media card search filter animations (React ViewTransition)
+@keyframes media-card-enter {
+    from {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+}
+
+@keyframes media-card-exit {
+    to {
+        opacity: 0;
+        transform: scale(0.92);
+    }
+}
+
+::view-transition-new(.media-card-enter) {
+    animation: media-card-enter 220ms ease-out;
+}
+
+::view-transition-old(.media-card-exit) {
+    animation: media-card-exit 220ms ease-in;
+}

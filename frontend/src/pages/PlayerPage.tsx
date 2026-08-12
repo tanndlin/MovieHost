@@ -1,6 +1,5 @@
 import { useContext, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import AnimatedLink from '../common/AnimatedLink';
+import { Link, useSearchParams } from 'react-router-dom';
 import VideoPlayer from '../components/VideoPlayer';
 import { StorageContext } from '../contexts/StorageContext';
 
@@ -42,12 +41,12 @@ const PlayerPage = () => {
             <main className="p-8">
                 <p className="text-red-400">No media path specified</p>
                 <div className="mb-4">
-                    <AnimatedLink
+                    <Link
                         to="/"
                         className="text-sm text-white/50 hover:text-white"
                     >
                         &larr; Back to library
-                    </AnimatedLink>
+                    </Link>
                 </div>
             </main>
         );
@@ -56,7 +55,7 @@ const PlayerPage = () => {
     return (
         <main className="max-w-screen-xl p-6 mx-auto">
             <div className="mb-5">
-                <AnimatedLink
+                <Link
                     to="/"
                     className="inline-flex items-center gap-1.5 text-sm transition-colors text-white/40 hover:text-white/80"
                 >
@@ -70,7 +69,7 @@ const PlayerPage = () => {
                         />
                     </svg>
                     Back to library
-                </AnimatedLink>
+                </Link>
             </div>
             <VideoPlayer
                 ref={playerRef}

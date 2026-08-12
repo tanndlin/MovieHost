@@ -1,6 +1,12 @@
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import axios from 'axios';
-import { useContext, useEffect, useMemo, useState } from 'react';
+import {
+    startTransition,
+    useContext,
+    useEffect,
+    useMemo,
+    useState
+} from 'react';
 import MediaCard from '../components/MediaCard';
 import { StorageContext } from '../contexts/StorageContext';
 import { WatchState, type MediaLibrary, type Show } from '../types';
@@ -26,6 +32,7 @@ const HomePage = () => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [query, setQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const { id, profile, setWatchState, unwatchPaths } =
         useContext(StorageContext);
     const watchStates = profile?.watch_states || {};
@@ -44,7 +51,14 @@ const HomePage = () => {
             .finally(() => setLoading(false));
     }, [id]);
 
-    const normalizedQuery = query.trim().toLowerCase();
+    const handleQueryChange = (value: string) => {
+        setQuery(value);
+        startTransition(() => {
+            setSearchQuery(value);
+        });
+    };
+
+    const normalizedQuery = searchQuery.trim().toLowerCase();
     const filtered = useMemo(() => {
         if (!library) {
             return { shows: [], movies: [], other: [] };
@@ -102,20 +116,20 @@ const HomePage = () => {
         shows.length > 0 || movies.length > 0 || other.length > 0;
 
     return (
-        <main className="max-w-screen-xl p-6 mx-auto w-full">
+        <main className="w-full max-w-screen-xl p-6 mx-auto">
             {hasLibrary && (
-                <div className="relative mb-8 max-w-md">
+                <div className="relative max-w-md mb-8">
                     <MagnifyingGlassIcon className="absolute w-4 h-4 -translate-y-1/2 pointer-events-none left-3 top-1/2 text-white/40" />
                     <input
                         type="text"
                         value={query}
-                        onChange={(e) => setQuery(e.target.value)}
+                        onChange={(e) => handleQueryChange(e.target.value)}
                         placeholder="Search your library..."
                         className="w-full py-2 pl-9 pr-9 text-sm !text-white placeholder-white/40 bg-white/5 border rounded-lg outline-none border-white/10 focus:border-white/25"
                     />
                     {query && (
                         <button
-                            onClick={() => setQuery('')}
+                            onClick={() => handleQueryChange('')}
                             title="Clear search"
                             className="absolute -translate-y-1/2 right-3 top-1/2 text-white/40 hover:text-white/80"
                         >
@@ -128,7 +142,7 @@ const HomePage = () => {
             {shows.length > 0 && (
                 <section className="mb-10">
                     <h2 className="flex items-center gap-2.5 mb-5 text-xl font-bold text-white">
-                        <span className="w-1 h-5 rounded-full bg-blue-500 inline-block shrink-0" />
+                        <span className="inline-block w-1 h-5 bg-blue-500 rounded-full shrink-0" />
                         TV Shows
                     </h2>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -197,7 +211,7 @@ const HomePage = () => {
             {movies.length > 0 && (
                 <section className="mb-10">
                     <h2 className="flex items-center gap-2.5 mb-5 text-xl font-bold text-white">
-                        <span className="w-1 h-5 rounded-full bg-purple-500 inline-block shrink-0" />
+                        <span className="inline-block w-1 h-5 bg-purple-500 rounded-full shrink-0" />
                         Movies
                     </h2>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
@@ -228,7 +242,7 @@ const HomePage = () => {
             {other.length > 0 && (
                 <section className="mb-10">
                     <h2 className="flex items-center gap-2.5 mb-5 text-xl font-bold text-white">
-                        <span className="w-1 h-5 rounded-full bg-gray-500 inline-block shrink-0" />
+                        <span className="inline-block w-1 h-5 bg-gray-500 rounded-full shrink-0" />
                         Other
                     </h2>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
