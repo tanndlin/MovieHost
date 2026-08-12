@@ -5,6 +5,7 @@
                 {
                     "name": "Docker",
                     "commands": [
+                        "cd frontend",
                         "npm run dev -- --port 3001",
                     ]
                 },
