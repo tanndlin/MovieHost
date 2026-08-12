@@ -97,7 +97,7 @@ async fn handle_ls() -> String {
     let mut entries = Vec::new();
     for entry in walkdir::WalkDir::new(&serve_dir)
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(Result::ok)
     {
         if entry.file_type().is_file() {
             let path = entry
@@ -140,23 +140,20 @@ async fn handle_thumbnail(
     let movie_info = match movie_info {
         Some(info) => info,
         None => {
-            match get_movie_info_from_tmdb(&params.path).await {
-                Some(info) => {
-                    // Cache the movie info
-                    let mut state_guard = state.lock().unwrap();
-                    state_guard
-                        .movie_info_cache
-                        .insert(params.path.clone(), info);
-                    state_guard
-                        .movie_info_cache
-                        .get(&params.path)
-                        .cloned()
-                        .unwrap()
-                }
-                None => {
-                    eprintln!("Movie info not found for path: {}", params.path);
-                    return StatusCode::NOT_FOUND.into_response();
-                }
+            if let Some(info) = get_movie_info_from_tmdb(&params.path).await {
+                // Cache the movie info
+                let mut state_guard = state.lock().unwrap();
+                state_guard
+                    .movie_info_cache
+                    .insert(params.path.clone(), info);
+                state_guard
+                    .movie_info_cache
+                    .get(&params.path)
+                    .cloned()
+                    .unwrap()
+            } else {
+                eprintln!("Movie info not found for path: {}", params.path);
+                return StatusCode::NOT_FOUND.into_response();
             }
         }
     };
@@ -198,7 +195,7 @@ async fn get_movie_info_from_tmdb(path: &str) -> Option<TMDBMovie> {
 
 async fn get_thumbnail_from_tmdb(movie_info: &TMDBMovie) -> Option<Vec<u8>> {
     let poster_path = movie_info.poster_path.as_ref()?;
-    let poster_url = format!("https://image.tmdb.org/t/p/w500{}", poster_path);
+    let poster_url = format!("https://image.tmdb.org/t/p/w500{poster_path}");
 
     let client = reqwest::Client::new();
     let poster_response = client.get(&poster_url).send().await.ok()?;
@@ -228,7 +225,7 @@ async fn handle_put_watch_state(
     match result {
         Ok(_) => StatusCode::OK.into_response(),
         Err(e) => {
-            eprintln!("Database error: {}", e);
+            eprintln!("Database error: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }

@@ -38,13 +38,13 @@ pub async fn handle_ws(socket: WebSocket, state: Arc<Mutex<AppState>>) {
                             .entry(user_id)
                             .or_default()
                             .push(tx.clone());
-                        println!("User {} connected", user_id);
+                        println!("User {user_id} connected");
                     }
                     WsClientMessage::Control(control_message) => {
-                        handle_control_message(control_message, &state).await;
+                        handle_control_message(control_message, &state);
                     }
                 },
-                Err(e) => eprintln!("Failed to parse: {}", e),
+                Err(e) => eprintln!("Failed to parse: {e}"),
             },
             _ => {}
         }
@@ -54,11 +54,11 @@ pub async fn handle_ws(socket: WebSocket, state: Arc<Mutex<AppState>>) {
         if let Some(senders) = state.lock().unwrap().websockets.get_mut(&user_id) {
             senders.retain(|sender| !sender.is_closed());
         }
-        println!("User {} disconnected", user_id);
+        println!("User {user_id} disconnected");
     }
 }
 
-async fn handle_control_message(control_message: ControlMessage, state: &Arc<Mutex<AppState>>) {
+fn handle_control_message(control_message: ControlMessage, state: &Arc<Mutex<AppState>>) {
     let user_id = control_message.user_id;
     // Wrap the control message in a server message and serialize it
     let server_msg = WsServerMessage::Control(control_message);

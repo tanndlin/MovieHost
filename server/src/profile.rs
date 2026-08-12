@@ -26,7 +26,7 @@ pub async fn handle_post_profile(State(state): State<Arc<Mutex<AppState>>>) -> i
             serde_json::to_string(&profile).unwrap(),
         ).into_response(),
         Err(e) => {
-            eprintln!("Database error: {}", e);
+            eprintln!("Database error: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
@@ -47,7 +47,7 @@ pub async fn handle_get_profile(
         Ok(p) => p,
         Err(sqlx::Error::RowNotFound) => return StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
-            eprintln!("Database error: {}", e);
+            eprintln!("Database error: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
@@ -62,7 +62,7 @@ pub async fn handle_get_profile(
     let watch_states = match watch_states {
         Ok(ws) => ws,
         Err(e) => {
-            eprintln!("Database error: {}", e);
+            eprintln!("Database error: {e}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     };
@@ -100,7 +100,7 @@ pub async fn handle_delete_profile(
         Ok(r) if r.rows_affected() > 0 => StatusCode::OK.into_response(),
         Ok(_) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
-            eprintln!("Database error: {}", e);
+            eprintln!("Database error: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
@@ -119,7 +119,7 @@ pub async fn handle_get_profiles(State(state): State<Arc<Mutex<AppState>>>) -> i
         )
             .into_response(),
         Err(e) => {
-            eprintln!("Database error: {}", e);
+            eprintln!("Database error: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
@@ -141,7 +141,7 @@ pub async fn handle_put_profile(
         Ok(r) if r.rows_affected() > 0 => StatusCode::OK.into_response(),
         Ok(_) => StatusCode::NOT_FOUND.into_response(),
         Err(e) => {
-            eprintln!("Database error: {}", e);
+            eprintln!("Database error: {e}");
             StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
