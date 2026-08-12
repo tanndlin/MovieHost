@@ -5,6 +5,7 @@
 - [x] Search/filter bar for the library
 - [ ] Auto-play next episode when one finishes
 - [ ] Subtitle tracks in VideoPlayer (.srt/.vtt sidecar support)
+- [ ] Filter for Watched/Unwatched
 
 ## Medium effort
 - [ ] Episode-level metadata/thumbnails from TMDB (currently show-level only)
