@@ -4,7 +4,11 @@ import MediaCard from '../components/MediaCard';
 import { LibraryContext } from '../contexts/LibraryContext';
 import { StorageContext } from '../contexts/StorageContext';
 import { WatchState, type Show } from '../types';
-import { hasWatchProgress, posterTransitionName } from '../utils/utils';
+import {
+    hasWatchProgress,
+    posterTransitionName,
+    titleTransitionName
+} from '../utils/utils';
 
 function showWatchProgress(
     show: Show,
@@ -141,6 +145,7 @@ const HomePage = () => {
                                     subtitle={`${seasonLabel}${progressLabel}`}
                                     icon="📺"
                                     posterName={posterTransitionName(show.name)}
+                                    titleName={titleTransitionName(show.name)}
                                     path={
                                         show.seasons[0]?.episodes[0]?.path || ''
                                     }
@@ -199,6 +204,7 @@ const HomePage = () => {
                                 to={`/player?path=${encodeURIComponent(movie.path)}&title=${encodeURIComponent(movie.name)}`}
                                 title={movie.name}
                                 icon="🎬"
+                                titleName={titleTransitionName(movie.path)}
                                 path={movie.path}
                                 watchState={watchStates[movie.path]}
                                 onUnwatch={
@@ -230,6 +236,7 @@ const HomePage = () => {
                                 to={`/player?path=${encodeURIComponent(file.path)}&title=${encodeURIComponent(file.name)}`}
                                 title={file.name}
                                 icon="📄"
+                                titleName={titleTransitionName(file.path)}
                                 path={file.path}
                                 watchState={watchStates[file.path]}
                                 onUnwatch={

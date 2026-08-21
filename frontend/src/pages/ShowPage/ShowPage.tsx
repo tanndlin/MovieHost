@@ -6,7 +6,11 @@ import { LibraryContext } from '../../contexts/LibraryContext';
 import { StorageContext } from '../../contexts/StorageContext';
 import { Season, Show, ShowDetailsResponse } from '../../types';
 import { API_BASE_URL } from '../../utils/env';
-import { hasWatchProgress, posterTransitionName } from '../../utils/utils';
+import {
+    hasWatchProgress,
+    posterTransitionName,
+    titleTransitionName
+} from '../../utils/utils';
 import SeasonDropdown from './SeasonDropdown';
 
 const ShowPage = () => {
@@ -98,9 +102,11 @@ const ShowPage = () => {
                         Back to Library
                     </Link>
                     <div className="flex items-center gap-3">
-                        <h1 className="text-3xl font-bold text-white tracking-tight">
-                            {show?.name ?? showName}
-                        </h1>
+                        <ViewTransition name={titleTransitionName(showName)}>
+                            <h1 className="text-3xl font-bold text-white tracking-tight">
+                                {show?.name ?? showName}
+                            </h1>
+                        </ViewTransition>
                         {showHasProgress && (
                             <button
                                 onClick={handleUnwatchShow}

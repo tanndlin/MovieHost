@@ -13,6 +13,8 @@ type Props = {
     onUnwatch?: () => void;
     /** Shared view-transition name to morph this card's poster into a hero image on the destination page. */
     posterName?: string;
+    /** Shared view-transition name to morph this card's title into its position on the destination page. */
+    titleName?: string;
 };
 
 const MediaCard = ({
@@ -23,7 +25,8 @@ const MediaCard = ({
     path,
     watchState,
     onUnwatch,
-    posterName
+    posterName,
+    titleName
 }: Props) => {
     const finished = watchState?.finished;
     const inProgress = !finished && (watchState?.last_position ?? 0) > 0;
@@ -63,9 +66,11 @@ const MediaCard = ({
 
                                 {/* Title overlay */}
                                 <div className="absolute bottom-0 left-0 right-0 p-3">
-                                    <p className="text-sm font-semibold text-white truncate leading-snug">
-                                        {title}
-                                    </p>
+                                    <ViewTransition name={titleName ?? 'auto'}>
+                                        <p className="text-sm font-semibold text-white truncate leading-snug">
+                                            {title}
+                                        </p>
+                                    </ViewTransition>
                                     {subtitle && (
                                         <p className="text-xs text-white/55 mt-0.5 truncate">
                                             {subtitle}

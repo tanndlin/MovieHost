@@ -1,5 +1,7 @@
+import { ViewTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Episode } from '../../types';
+import { titleTransitionName } from '../../utils/utils';
 
 type ShowItemProps = {
     ep: Episode;
@@ -34,9 +36,11 @@ const ShowItem = ({ ep, watchStates, onUnwatch }: ShowItemProps) => {
                 <span className="w-8 text-xs font-mono text-white/25 shrink-0">
                     {ep.episode ? `E${ep.episode.padStart(2, '0')}` : ''}
                 </span>
-                <span className="flex-1 text-sm truncate transition-colors text-white/70 group-hover:text-white">
-                    {ep.name}
-                </span>
+                <ViewTransition name={titleTransitionName(ep.path)}>
+                    <span className="flex-1 text-sm truncate transition-colors text-white/70 group-hover:text-white">
+                        {ep.name}
+                    </span>
+                </ViewTransition>
                 <span className="flex items-center gap-2 ml-auto shrink-0">
                     {finished && (
                         <button
