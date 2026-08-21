@@ -1,6 +1,7 @@
 import { ViewTransition } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
+import { LibraryProvider } from './contexts/LibraryContext';
 import { StorageProvider } from './contexts/StorageContext';
 import { WebsocketProvider } from './contexts/WebsocketContext';
 import HomePage from './pages/HomePage';
@@ -12,34 +13,36 @@ import ShowPage from './pages/ShowPage/ShowPage';
 function App() {
     return (
         <StorageProvider>
-            <WebsocketProvider>
-                <BrowserRouter future={{ v7_startTransition: true }}>
-                    <div className="flex flex-col min-h-screen">
-                        <Header />
-                        <ViewTransition>
-                            <Routes>
-                                <Route path="/" element={<HomePage />} />
-                                <Route
-                                    path="/show/:name"
-                                    element={<ShowPage />}
-                                />
-                                <Route
-                                    path="/player"
-                                    element={<PlayerPage />}
-                                />
-                                <Route
-                                    path="/settings"
-                                    element={<SettingsPage />}
-                                />
-                                <Route
-                                    path="/remote"
-                                    element={<RemotePage />}
-                                />
-                            </Routes>
-                        </ViewTransition>
-                    </div>
-                </BrowserRouter>
-            </WebsocketProvider>
+            <LibraryProvider>
+                <WebsocketProvider>
+                    <BrowserRouter future={{ v7_startTransition: true }}>
+                        <div className="flex flex-col min-h-screen">
+                            <Header />
+                            <ViewTransition>
+                                <Routes>
+                                    <Route path="/" element={<HomePage />} />
+                                    <Route
+                                        path="/show/:name"
+                                        element={<ShowPage />}
+                                    />
+                                    <Route
+                                        path="/player"
+                                        element={<PlayerPage />}
+                                    />
+                                    <Route
+                                        path="/settings"
+                                        element={<SettingsPage />}
+                                    />
+                                    <Route
+                                        path="/remote"
+                                        element={<RemotePage />}
+                                    />
+                                </Routes>
+                            </ViewTransition>
+                        </div>
+                    </BrowserRouter>
+                </WebsocketProvider>
+            </LibraryProvider>
         </StorageProvider>
     );
 }

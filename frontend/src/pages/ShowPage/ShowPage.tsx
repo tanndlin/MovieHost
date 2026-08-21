@@ -2,14 +2,11 @@ import { ViewTransition } from 'react';
 import { useContext, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import useFetch from '../../common/useFetch';
+import { LibraryContext } from '../../contexts/LibraryContext';
 import { StorageContext } from '../../contexts/StorageContext';
 import { Season, Show, ShowDetailsResponse } from '../../types';
 import { API_BASE_URL } from '../../utils/env';
-import {
-    hasWatchProgress,
-    parseMediaLibrary,
-    posterTransitionName
-} from '../../utils/utils';
+import { hasWatchProgress, posterTransitionName } from '../../utils/utils';
 import SeasonDropdown from './SeasonDropdown';
 
 const ShowPage = () => {
@@ -47,7 +44,7 @@ const ShowPage = () => {
         s.episodes.some((ep) => hasWatchProgress(watchStates[ep.path]))
     );
 
-    const { loading, error, data } = useFetch<string[]>(`${API_BASE_URL}/ls`);
+    const { library, loading, error } = useContext(LibraryContext);
 
     // Derived directly from the route param so the poster can render (and
     // participate in the view transition) before the library fetch resolves.
@@ -60,9 +57,8 @@ const ShowPage = () => {
     const poster = `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(basePath)}`;
 
     useEffect(() => {
-        if (data) {
-            const lib = parseMediaLibrary(data);
-            const found = lib.shows.find((s) => s.name === showName);
+        if (library) {
+            const found = library.shows.find((s) => s.name === showName);
             if (found) {
                 setShow(found);
                 const currentWatchStates = watchStatesRef.current;
@@ -75,7 +71,7 @@ const ShowPage = () => {
                 setOpenSeason(firstUnwatched?.name ?? null);
             }
         }
-    }, [data, showName]);
+    }, [library, showName]);
 
     return (
         <main className="max-w-screen-lg p-6 mx-auto w-full">

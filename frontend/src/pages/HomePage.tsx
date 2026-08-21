@@ -1,21 +1,10 @@
 import { MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import axios from 'axios';
-import {
-    startTransition,
-    useContext,
-    useEffect,
-    useMemo,
-    useState
-} from 'react';
+import { startTransition, useContext, useMemo, useState } from 'react';
 import MediaCard from '../components/MediaCard';
+import { LibraryContext } from '../contexts/LibraryContext';
 import { StorageContext } from '../contexts/StorageContext';
-import { WatchState, type MediaLibrary, type Show } from '../types';
-import { API_BASE_URL } from '../utils/env';
-import {
-    hasWatchProgress,
-    parseMediaLibrary,
-    posterTransitionName
-} from '../utils/utils';
+import { WatchState, type Show } from '../types';
+import { hasWatchProgress, posterTransitionName } from '../utils/utils';
 
 function showWatchProgress(
     show: Show,
@@ -32,28 +21,12 @@ function showWatchProgress(
 }
 
 const HomePage = () => {
-    const [library, setLibrary] = useState<MediaLibrary | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [query, setQuery] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
     const { id, profile, setWatchState, unwatchPaths } =
         useContext(StorageContext);
+    const { library, loading, error } = useContext(LibraryContext);
+    const [query, setQuery] = useState('');
+    const [searchQuery, setSearchQuery] = useState('');
     const watchStates = profile?.watch_states || {};
-
-    useEffect(() => {
-        if (id === undefined) {
-            return;
-        }
-
-        axios
-            .get<string[]>(`${API_BASE_URL}/ls`)
-            .then((res) => {
-                setLibrary(parseMediaLibrary(res.data));
-            })
-            .catch(() => setError('Failed to load media library'))
-            .finally(() => setLoading(false));
-    }, [id]);
 
     const handleQueryChange = (value: string) => {
         setQuery(value);

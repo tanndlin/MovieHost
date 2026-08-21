@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { Profile, WatchState } from '../types';
 
 type IStorage = {
@@ -76,78 +76,88 @@ export const StorageProvider = ({ children }: Props) => {
             });
     }, [id]);
 
-    const setWatchState = (path: string, ws: WatchState) => {
-        if (!profile) {
-            console.error('No profile loaded, cannot set watch state');
-            return;
-        }
+    const setWatchState = useCallback(
+        (path: string, ws: WatchState) => {
+            setProfile((prev) => {
+                if (!prev) {
+                    console.error('No profile loaded, cannot set watch state');
+                    return prev;
+                }
 
-        setProfile((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      watch_states: {
-                          ...prev.watch_states,
-                          [path]: ws
-                      }
-                  }
-                : prev
-        );
+                return {
+                    ...prev,
+                    watch_states: {
+                        ...prev.watch_states,
+                        [path]: ws
+                    }
+                };
+            });
 
-        fetch(`/api/profile/${id}/watch_state`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                movie_path: path,
-                last_position: ws.last_position,
-                finished: ws.finished
-            })
-        }).catch((err) => console.error(err));
-    };
-
-    const unwatchPaths = (paths: string[]) => {
-        if (!profile || paths.length === 0) {
-            return;
-        }
-
-        const resetStates: Record<string, WatchState> = {};
-        for (const path of paths) {
-            resetStates[path] = {
-                movie_path: path,
-                last_position: 0,
-                finished: false
-            };
-        }
-
-        setProfile((prev) =>
-            prev
-                ? {
-                      ...prev,
-                      watch_states: { ...prev.watch_states, ...resetStates }
-                  }
-                : prev
-        );
-
-        for (const path of paths) {
             fetch(`/api/profile/${id}/watch_state`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     movie_path: path,
-                    last_position: 0,
-                    finished: false
+                    last_position: ws.last_position,
+                    finished: ws.finished
                 })
             }).catch((err) => console.error(err));
-        }
-    };
+        },
+        [id]
+    );
 
-    const state: IStorage = {
-        id: id!,
-        setID,
-        profile,
-        setWatchState,
-        unwatchPaths
-    };
+    const unwatchPaths = useCallback(
+        (paths: string[]) => {
+            if (paths.length === 0) {
+                return;
+            }
+
+            const resetStates: Record<string, WatchState> = {};
+            for (const path of paths) {
+                resetStates[path] = {
+                    movie_path: path,
+                    last_position: 0,
+                    finished: false
+                };
+            }
+
+            setProfile((prev) =>
+                prev
+                    ? {
+                          ...prev,
+                          watch_states: {
+                              ...prev.watch_states,
+                              ...resetStates
+                          }
+                      }
+                    : prev
+            );
+
+            for (const path of paths) {
+                fetch(`/api/profile/${id}/watch_state`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        movie_path: path,
+                        last_position: 0,
+                        finished: false
+                    })
+                }).catch((err) => console.error(err));
+            }
+        },
+        [id]
+    );
+
+    const state: IStorage = useMemo(
+        () => ({
+            id: id!,
+            setID,
+            profile,
+            setWatchState,
+            unwatchPaths
+        }),
+        [id, profile, setWatchState, unwatchPaths]
+    );
 
     return (
         <StorageContext.Provider value={state}>
