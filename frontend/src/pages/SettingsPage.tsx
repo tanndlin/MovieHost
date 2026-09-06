@@ -14,7 +14,7 @@ const SettingsPage = () => {
     }, [profile]);
 
     function handleDeleteProfile() {
-        if (window.confirm('Are you sure you want to delete your profile?')) {
+        if (!window.confirm('Are you sure you want to delete your profile?')) {
             return;
         }
 
