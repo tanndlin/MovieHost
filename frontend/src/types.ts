@@ -33,21 +33,6 @@ export type MediaLibrary = {
     other: MediaFile[];
 };
 
-export const VIDEO_EXTENSIONS = new Set([
-    'mp4',
-    'mkv',
-    'avi',
-    'mov',
-    'wmv',
-    'flv',
-    'webm',
-    'm4v',
-    'mpg',
-    'mpeg',
-    'ts',
-    'm2ts'
-]);
-
 export type WatchState = {
     last_position: number;
     finished: boolean;

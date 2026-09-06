@@ -13,6 +13,7 @@ use tokio::sync::mpsc::UnboundedSender;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
 
+use crate::library::{handle_library, list_media_files};
 use crate::profile::{
     handle_delete_profile, handle_get_profile, handle_get_profiles, handle_post_profile,
     handle_put_profile,
@@ -20,6 +21,7 @@ use crate::profile::{
 use crate::types::{TMBDResponse, TMDBMovie, ThumbnailParams, WatchStateUpdate};
 use crate::ws::websocket::handle_ws;
 
+mod library;
 mod profile;
 mod types;
 mod ws;
@@ -61,6 +63,7 @@ async fn main() {
 
     let app = Router::new()
         .route("/api/ls", get(handle_ls))
+        .route("/api/library", get(handle_library))
         .route("/api/thumbnail", get(handle_thumbnail))
         .route("/api/details", get(handle_details))
         .route("/api/profile", post(handle_post_profile))
@@ -94,23 +97,7 @@ async fn main() {
 
 async fn handle_ls() -> String {
     let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
-    let mut entries = Vec::new();
-    for entry in walkdir::WalkDir::new(&serve_dir)
-        .into_iter()
-        .filter_map(Result::ok)
-    {
-        if entry.file_type().is_file() {
-            let path = entry
-                .path()
-                .strip_prefix(&serve_dir)
-                .unwrap()
-                .to_str()
-                .unwrap()
-                .replace('\\', "/");
-            entries.push(path);
-        }
-    }
-    serde_json::to_string(&entries).unwrap()
+    serde_json::to_string(&list_media_files(&serve_dir)).unwrap()
 }
 
 fn path_hash(path: &str) -> u64 {

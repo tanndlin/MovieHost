@@ -2,7 +2,6 @@ import axios from 'axios';
 import React, { useContext, useEffect, useState } from 'react';
 import { MediaLibrary } from '../types';
 import { API_BASE_URL } from '../utils/env';
-import { parseMediaLibrary } from '../utils/utils';
 import { StorageContext } from './StorageContext';
 
 type ILibrary = {
@@ -35,9 +34,9 @@ export const LibraryProvider = ({ children }: Props) => {
         }
 
         axios
-            .get<string[]>(`${API_BASE_URL}/ls`)
+            .get<MediaLibrary>(`${API_BASE_URL}/library`)
             .then((res) => {
-                setLibrary(parseMediaLibrary(res.data));
+                setLibrary(res.data);
             })
             .catch(() => setError('Failed to load media library'))
             .finally(() => setLoading(false));
