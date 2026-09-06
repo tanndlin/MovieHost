@@ -5,7 +5,6 @@
     "dependencies": {
         "@heroicons/react": "^2.2.0",
         "@vitejs/plugin-react-swc": "^3.9.0",
-        "axios": "^1.13.6",
         "react": "0.0.0-experimental-bfb7a768-20260811",
         "react-dom": "0.0.0-experimental-bfb7a768-20260811",
         "react-router-dom": "^6.26.1",

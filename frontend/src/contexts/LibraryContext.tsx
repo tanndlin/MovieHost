@@ -1,5 +1,5 @@
-import axios from 'axios';
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext } from 'react';
+import useFetch from '../common/useFetch';
 import { MediaLibrary } from '../types';
 import { API_BASE_URL } from '../utils/env';
 import { StorageContext } from './StorageContext';
@@ -24,26 +24,18 @@ type Props = {
 
 export const LibraryProvider = ({ children }: Props) => {
     const { id } = useContext(StorageContext);
-    const [library, setLibrary] = useState<MediaLibrary | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-
-    useEffect(() => {
-        if (id === undefined) {
-            return;
-        }
-
-        axios
-            .get<MediaLibrary>(`${API_BASE_URL}/library`)
-            .then((res) => {
-                setLibrary(res.data);
-            })
-            .catch(() => setError('Failed to load media library'))
-            .finally(() => setLoading(false));
-    }, [id]);
+    const { data, loading, error } = useFetch<MediaLibrary>(
+        id !== undefined ? `${API_BASE_URL}/library` : null
+    );
 
     return (
-        <LibraryContext.Provider value={{ library, loading, error }}>
+        <LibraryContext.Provider
+            value={{
+                library: data,
+                loading,
+                error: error ? 'Failed to load media library' : ''
+            }}
+        >
             {children}
         </LibraryContext.Provider>
     );
