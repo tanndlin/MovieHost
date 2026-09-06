@@ -23,18 +23,27 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
         const [error, setError] = useState(false);
 
         const src = `${API_BASE_URL}/media/${path}`;
-        // Set the favicon to the video thumbnail and the title to the video title
+        // Point the tab title and favicon at the video while it's playing, then
+        // restore whatever they were once the player unmounts.
         useEffect(() => {
+            const previousTitle = document.title;
+            const link =
+                document.querySelector<HTMLLinkElement>("link[rel~='icon']");
+            const previousIcon = link?.href;
+
             if (title) {
                 document.title = title;
             }
-
-            const link = document.querySelector(
-                "link[rel~='icon']"
-            ) as HTMLLinkElement;
             if (link) {
                 link.href = `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(path)}`;
             }
+
+            return () => {
+                document.title = previousTitle;
+                if (link && previousIcon !== undefined) {
+                    link.href = previousIcon;
+                }
+            };
         }, [title, path]);
 
         const { addCallback, removeCallback } = useContext(WebsocketContext);
