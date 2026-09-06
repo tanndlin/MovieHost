@@ -19,6 +19,11 @@ const RemotePage = () => {
             return;
         }
 
+        if (id === undefined) {
+            console.error('No profile selected');
+            return;
+        }
+
         const message: WsControlMessage = {
             type: 'Control',
             userId: id,

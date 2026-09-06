@@ -56,6 +56,9 @@ export const WebsocketProvider = ({ children }: Props) => {
         }
 
         ws.onopen = () => {
+            if (id === undefined) {
+                return;
+            }
             const handshakeMessage: WsClientMessage = {
                 type: 'Handshake',
                 userId: id

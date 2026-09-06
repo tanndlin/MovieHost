@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo } from 'react';
 import { Profile, WatchState } from '../types';
 
 type IStorage = {
-    id: number;
+    id: number | undefined;
     setID: (id: number | undefined) => void;
     profile?: Profile;
     setWatchState: (path: string, ws: WatchState) => void;
@@ -11,7 +11,7 @@ type IStorage = {
 };
 
 const defaultState: IStorage = {
-    id: 0,
+    id: undefined,
     setID: () => {},
     profile: undefined,
     setWatchState: () => {},
@@ -162,7 +162,7 @@ export const StorageProvider = ({ children }: Props) => {
 
     const state: IStorage = useMemo(
         () => ({
-            id: id!,
+            id,
             setID,
             profile,
             setWatchState,
