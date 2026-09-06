@@ -1,4 +1,12 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import {
+    createContext,
+    useCallback,
+    useContext,
+    useEffect,
+    useMemo,
+    useRef,
+    useState
+} from 'react';
 import {
     WsClientMessage,
     WsServerMessage,
@@ -30,6 +38,8 @@ type Props = {
     children?: React.ReactNode;
 };
 
+const RECONNECT_DELAY_MS = 2000;
+
 export const WebsocketContext = createContext<IWebsocketContext>(defaultState);
 
 export const WebsocketProvider = ({ children }: Props) => {
@@ -38,17 +48,28 @@ export const WebsocketProvider = ({ children }: Props) => {
     const callbacks = useRef<
         Partial<Record<WsServerMessageType, ((msg: WsServerMessage) => void)[]>>
     >({});
+    const wsRef = useRef<WebSocket | null>(null);
+    const reconnectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+        undefined
+    );
     const shouldReconnect = useRef(true);
+
+    const connect = useCallback(() => {
+        const socket = new WebSocket(`ws://${window.location.host}/ws`);
+        wsRef.current = socket;
+        setWs(socket);
+    }, []);
 
     useEffect(() => {
         shouldReconnect.current = true;
-        const socket = new WebSocket(`ws://${window.location.host}/ws`);
-        setWs(socket);
+        connect();
+
         return () => {
             shouldReconnect.current = false;
-            socket.close();
+            clearTimeout(reconnectTimer.current);
+            wsRef.current?.close();
         };
-    }, []);
+    }, [connect]);
 
     useEffect(() => {
         if (!ws) {
@@ -67,16 +88,14 @@ export const WebsocketProvider = ({ children }: Props) => {
         };
         ws.onclose = () => {
             if (shouldReconnect.current) {
-                setTimeout(() => {
-                    const socket = new WebSocket(
-                        `ws://${window.location.host}/ws`
-                    );
-                    setWs(socket);
-                }, 2000);
+                reconnectTimer.current = setTimeout(
+                    connect,
+                    RECONNECT_DELAY_MS
+                );
             }
         };
-        ws.onerror = (error) => {
-            console.error('WebSocket error:', error);
+        ws.onerror = (event) => {
+            console.error('WebSocket error:', event);
         };
         ws.onmessage = (event) => {
             const message: WsServerMessage = JSON.parse(event.data);
@@ -91,42 +110,54 @@ export const WebsocketProvider = ({ children }: Props) => {
                 );
             }
         };
-    }, [ws, id]);
 
-    const addCallback = (
-        type: WsServerMessageType,
-        callback: (msg: WsServerMessage) => void
-    ) => {
-        if (!callbacks.current[type]) {
-            callbacks.current[type] = [];
-        }
-        callbacks.current[type].push(callback);
-    };
+        return () => {
+            ws.onopen = null;
+            ws.onclose = null;
+            ws.onerror = null;
+            ws.onmessage = null;
+        };
+    }, [ws, id, connect]);
 
-    const removeCallback = (
-        type: WsServerMessageType,
-        callback: (msg: WsServerMessage) => void
-    ) => {
-        const cbs = callbacks.current[type];
-        if (cbs) {
-            callbacks.current[type] = cbs.filter((cb) => cb !== callback);
-        }
-    };
+    const addCallback = useCallback(
+        (
+            type: WsServerMessageType,
+            callback: (msg: WsServerMessage) => void
+        ) => {
+            if (!callbacks.current[type]) {
+                callbacks.current[type] = [];
+            }
+            callbacks.current[type].push(callback);
+        },
+        []
+    );
 
-    const sendMessage = (msg: WsClientMessage) => {
-        if (!ws || ws.readyState !== WebSocket.OPEN) {
+    const removeCallback = useCallback(
+        (
+            type: WsServerMessageType,
+            callback: (msg: WsServerMessage) => void
+        ) => {
+            const cbs = callbacks.current[type];
+            if (cbs) {
+                callbacks.current[type] = cbs.filter((cb) => cb !== callback);
+            }
+        },
+        []
+    );
+
+    const sendMessage = useCallback((msg: WsClientMessage) => {
+        const socket = wsRef.current;
+        if (!socket || socket.readyState !== WebSocket.OPEN) {
             console.error('WebSocket connection not established');
             return;
         }
-        ws.send(JSON.stringify(msg));
-    };
+        socket.send(JSON.stringify(msg));
+    }, []);
 
-    const state: IWebsocketContext = {
-        ws,
-        sendMessage,
-        addCallback,
-        removeCallback
-    };
+    const state = useMemo<IWebsocketContext>(
+        () => ({ ws, sendMessage, addCallback, removeCallback }),
+        [ws, sendMessage, addCallback, removeCallback]
+    );
 
     return (
         <WebsocketContext.Provider value={state}>
