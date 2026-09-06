@@ -7,7 +7,7 @@ import {
 } from 'react';
 import { WebsocketContext } from '../contexts/WebsocketContext';
 import { API_BASE_URL } from '../utils/env';
-import { titleTransitionName } from '../utils/utils';
+import { mediaUrl, titleTransitionName } from '../utils/utils';
 import { WsControlMessage } from '../wsTypes';
 import DownloadLink from './DownloadLink';
 
@@ -22,7 +22,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
     ({ path, title, startTime, onTimeUpdate }, ref) => {
         const [error, setError] = useState(false);
 
-        const src = `${API_BASE_URL}/media/${path}`;
+        const src = mediaUrl(path);
         // Point the tab title and favicon at the video while it's playing, then
         // restore whatever they were once the player unmounts.
         useEffect(() => {

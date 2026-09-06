@@ -1,4 +1,15 @@
 import { WatchState, WatchStatus } from '../types';
+import { API_BASE_URL } from './env';
+
+/**
+ * URL for streaming or downloading a media file. Each path segment is
+ * percent-encoded individually so spaces and other special characters in
+ * filenames survive, while the `/` separators stay intact for routing.
+ */
+export function mediaUrl(path: string): string {
+    const encoded = path.split('/').map(encodeURIComponent).join('/');
+    return `${API_BASE_URL}/media/${encoded}`;
+}
 
 export function posterTransitionName(showName: string): string {
     return `show-poster-${sanitizeTransitionName(showName)}`;

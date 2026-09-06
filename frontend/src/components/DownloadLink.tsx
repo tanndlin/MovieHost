@@ -1,4 +1,4 @@
-import { API_BASE_URL } from '../utils/env';
+import { mediaUrl } from '../utils/utils';
 
 type Props = {
     path: string;
@@ -6,7 +6,7 @@ type Props = {
 };
 
 const DownloadLink = ({ path, title }: Props) => {
-    const href = `${API_BASE_URL}/media/${path}`;
+    const href = mediaUrl(path);
 
     return (
         <a
