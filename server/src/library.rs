@@ -9,6 +9,8 @@ const VIDEO_EXTENSIONS: &[&str] = &[
 ];
 
 #[derive(Serialize)]
+// Field names mirror the frontend `Episode` type, so `episode` stays `episode`.
+#[allow(clippy::struct_field_names)]
 pub struct Episode {
     pub name: String,
     pub path: String,
@@ -138,8 +140,8 @@ pub fn parse_media_library(paths: &[String]) -> MediaLibrary {
                 .into_iter()
                 .map(|(season_name, mut episodes)| {
                     episodes.sort_by(|a, b| {
-                        episode_num(&a.episode)
-                            .cmp(&episode_num(&b.episode))
+                        episode_num(a.episode.as_deref())
+                            .cmp(&episode_num(b.episode.as_deref()))
                             .then_with(|| ci_cmp(&a.name, &b.name))
                     });
                     Season {
@@ -186,12 +188,8 @@ fn get_base_name(path: &str) -> String {
     }
 }
 
-fn episode_num(episode: &Option<String>) -> i64 {
-    episode
-        .as_deref()
-        .unwrap_or("0")
-        .parse::<i64>()
-        .unwrap_or(0)
+fn episode_num(episode: Option<&str>) -> i64 {
+    episode.unwrap_or("0").parse::<i64>().unwrap_or(0)
 }
 
 /// Case-insensitive ordering, with the raw string as a stable tiebreaker.
@@ -229,7 +227,10 @@ fn parse_episode_number(name: &str) -> (String, Option<String>) {
             continue;
         }
         let season: i64 = name[season_start..j].parse().unwrap_or(0);
-        return (format!("Season {season}"), Some(name[episode_start..k].to_string()));
+        return (
+            format!("Season {season}"),
+            Some(name[episode_start..k].to_string()),
+        );
     }
 
     // Pattern: (\d+)[xX](\d+)
@@ -253,7 +254,10 @@ fn parse_episode_number(name: &str) -> (String, Option<String>) {
             continue;
         }
         let season: i64 = name[i..j].parse().unwrap_or(0);
-        return (format!("Season {season}"), Some(name[episode_start..k].to_string()));
+        return (
+            format!("Season {season}"),
+            Some(name[episode_start..k].to_string()),
+        );
     }
 
     ("Season 1".to_string(), None)
@@ -264,7 +268,7 @@ mod tests {
     use super::*;
 
     fn paths(list: &[&str]) -> Vec<String> {
-        list.iter().map(|s| s.to_string()).collect()
+        list.iter().copied().map(String::from).collect()
     }
 
     #[test]
@@ -288,7 +292,10 @@ mod tests {
         assert_eq!(show.seasons[0].episodes[1].episode.as_deref(), Some("02"));
 
         assert_eq!(
-            lib.movies.iter().map(|m| m.name.as_str()).collect::<Vec<_>>(),
+            lib.movies
+                .iter()
+                .map(|m| m.name.as_str())
+                .collect::<Vec<_>>(),
             vec!["Blade Runner", "Heat"]
         );
 
@@ -315,12 +322,12 @@ mod tests {
 
     #[test]
     fn shows_and_seasons_sort_case_insensitively() {
-        let lib = parse_media_library(&paths(&[
-            "Shows/zebra/s1e1.mp4",
-            "Shows/Apple/s1e1.mp4",
-        ]));
+        let lib = parse_media_library(&paths(&["Shows/zebra/s1e1.mp4", "Shows/Apple/s1e1.mp4"]));
         assert_eq!(
-            lib.shows.iter().map(|s| s.name.as_str()).collect::<Vec<_>>(),
+            lib.shows
+                .iter()
+                .map(|s| s.name.as_str())
+                .collect::<Vec<_>>(),
             vec!["Apple", "zebra"]
         );
     }

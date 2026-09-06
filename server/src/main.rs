@@ -106,6 +106,13 @@ fn path_hash(path: &str) -> u64 {
     h.finish()
 }
 
+/// Posters are TMDB-backed and don't change for a given path, so let clients
+/// (and the hover-prefetch on media cards) keep them for a week.
+const THUMBNAIL_CACHE_CONTROL: &str = "public, max-age=604800, immutable";
+/// Show/movie details are effectively immutable but cheap to refresh, so use a
+/// shorter TTL than the poster image.
+const DETAILS_CACHE_CONTROL: &str = "public, max-age=86400";
+
 async fn handle_thumbnail(
     State(state): State<Arc<Mutex<AppState>>>,
     Query(params): Query<ThumbnailParams>,
@@ -114,8 +121,13 @@ async fn handle_thumbnail(
 
     let thumb_path = format!("/tmp/thumb_{:x}.jpg", path_hash(&params.path));
 
+    let thumbnail_headers = [
+        (header::CONTENT_TYPE, "image/jpeg"),
+        (header::CACHE_CONTROL, THUMBNAIL_CACHE_CONTROL),
+    ];
+
     if let Ok(bytes) = tokio::fs::read(&thumb_path).await {
-        return ([(header::CONTENT_TYPE, "image/jpeg")], bytes).into_response();
+        return (thumbnail_headers, bytes).into_response();
     }
 
     // Check movie info cache first
@@ -147,7 +159,7 @@ async fn handle_thumbnail(
 
     if let Some(bytes) = get_thumbnail_from_tmdb(&movie_info).await {
         let _ = tokio::fs::write(&thumb_path, &bytes).await;
-        return ([(header::CONTENT_TYPE, "image/jpeg")], bytes).into_response();
+        return (thumbnail_headers, bytes).into_response();
     }
 
     StatusCode::NOT_FOUND.into_response()
@@ -248,7 +260,11 @@ async fn handle_details(
         }
     };
 
-    Json(movie_info).into_response()
+    (
+        [(header::CACHE_CONTROL, DETAILS_CACHE_CONTROL)],
+        Json(movie_info),
+    )
+        .into_response()
 }
 
 async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<Mutex<AppState>>>) -> Response {
