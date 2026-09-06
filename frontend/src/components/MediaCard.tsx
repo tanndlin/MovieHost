@@ -1,6 +1,6 @@
 import { ViewTransition } from 'react';
 import { Link } from 'react-router-dom';
-import { WatchState } from '../types';
+import { WatchStatus } from '../types';
 import { API_BASE_URL } from '../utils/env';
 
 type Props = {
@@ -9,7 +9,7 @@ type Props = {
     subtitle?: string;
     icon?: string;
     path?: string;
-    watchState?: WatchState;
+    status?: WatchStatus;
     onUnwatch?: () => void;
     /** Shared view-transition name to morph this card's poster into a hero image on the destination page. */
     posterName?: string;
@@ -23,13 +23,13 @@ const MediaCard = ({
     subtitle,
     icon,
     path,
-    watchState,
+    status,
     onUnwatch,
     posterName,
     titleName
 }: Props) => {
-    const finished = watchState?.finished;
-    const inProgress = !finished && (watchState?.last_position ?? 0) > 0;
+    const finished = status === 'finished';
+    const inProgress = status === 'in-progress';
 
     // If its a show, just get the parent dir name
     const split = path?.split('/');

@@ -39,6 +39,9 @@ export type WatchState = {
     movie_path: string;
 };
 
+/** Coarse watch status derived from a `WatchState`, for badge rendering. */
+export type WatchStatus = 'finished' | 'in-progress';
+
 export type Profile = {
     id: string;
     username: string;

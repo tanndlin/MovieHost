@@ -7,7 +7,8 @@ import { WatchState, type Show } from '../types';
 import {
     hasWatchProgress,
     posterTransitionName,
-    titleTransitionName
+    titleTransitionName,
+    watchStatus
 } from '../utils/utils';
 
 function showWatchProgress(
@@ -149,25 +150,11 @@ const HomePage = () => {
                                     path={
                                         show.seasons[0]?.episodes[0]?.path || ''
                                     }
-                                    watchState={
+                                    status={
                                         allFinished
-                                            ? {
-                                                  last_position: 0,
-                                                  finished: true,
-                                                  movie_path:
-                                                      show.seasons[0]
-                                                          ?.episodes[0]?.path ||
-                                                      ''
-                                              }
+                                            ? 'finished'
                                             : anyProgress
-                                              ? {
-                                                    last_position: 1,
-                                                    finished: false,
-                                                    movie_path:
-                                                        show.seasons[0]
-                                                            ?.episodes[0]
-                                                            ?.path || ''
-                                                }
+                                              ? 'in-progress'
                                               : undefined
                                     }
                                     onUnwatch={
@@ -206,7 +193,7 @@ const HomePage = () => {
                                 icon="🎬"
                                 titleName={titleTransitionName(movie.path)}
                                 path={movie.path}
-                                watchState={watchStates[movie.path]}
+                                status={watchStatus(watchStates[movie.path])}
                                 onUnwatch={
                                     hasWatchProgress(watchStates[movie.path])
                                         ? () => unwatchPath(movie.path)
@@ -233,7 +220,7 @@ const HomePage = () => {
                                 icon="📄"
                                 titleName={titleTransitionName(file.path)}
                                 path={file.path}
-                                watchState={watchStates[file.path]}
+                                status={watchStatus(watchStates[file.path])}
                                 onUnwatch={
                                     hasWatchProgress(watchStates[file.path])
                                         ? () => unwatchPath(file.path)
