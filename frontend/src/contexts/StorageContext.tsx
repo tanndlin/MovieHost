@@ -4,6 +4,7 @@ import { Profile, WatchState } from '../types';
 type IStorage = {
     id: number | undefined;
     setID: (id: number | undefined) => void;
+    createProfile: () => void;
     profile?: Profile;
     setWatchState: (path: string, ws: WatchState) => void;
     unwatchPath: (path: string) => void;
@@ -13,6 +14,7 @@ type IStorage = {
 const defaultState: IStorage = {
     id: undefined,
     setID: () => {},
+    createProfile: () => {},
     profile: undefined,
     setWatchState: () => {},
     unwatchPath: () => {},
@@ -64,17 +66,16 @@ export const StorageProvider = ({ children }: Props) => {
         }
     }, [id]);
 
+    const createProfile = useCallback(() => {
+        createNewProfile().then((newProfile) => {
+            if (newProfile) {
+                setID(newProfile.id);
+            }
+        });
+    }, []);
+
     useEffect(() => {
         if (id === undefined) {
-            return;
-        }
-
-        if (id === -1) {
-            createNewProfile().then((newProfile) => {
-                if (newProfile) {
-                    setID(newProfile.id);
-                }
-            });
             return;
         }
 
@@ -164,12 +165,13 @@ export const StorageProvider = ({ children }: Props) => {
         () => ({
             id,
             setID,
+            createProfile,
             profile,
             setWatchState,
             unwatchPath,
             unwatchPaths
         }),
-        [id, profile, setWatchState, unwatchPath, unwatchPaths]
+        [id, createProfile, profile, setWatchState, unwatchPath, unwatchPaths]
     );
 
     return (

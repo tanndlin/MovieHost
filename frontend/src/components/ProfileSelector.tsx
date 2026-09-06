@@ -8,7 +8,7 @@ type Profile = {
 };
 
 const ProfileSelector = () => {
-    const { id, setID } = useContext(StorageContext);
+    const { id, setID, createProfile } = useContext(StorageContext);
 
     const {
         loading,
@@ -27,7 +27,11 @@ const ProfileSelector = () => {
                 value={id || ''}
                 onChange={(e) => {
                     const val = e.target.value;
-                    setID(val === 'new' ? -1 : parseInt(val, 10));
+                    if (val === 'new') {
+                        createProfile();
+                    } else {
+                        setID(parseInt(val, 10));
+                    }
                 }}
                 className="px-2 py-1 text-sm text-white bg-gray-700 rounded"
                 disabled={loading || !!error}
