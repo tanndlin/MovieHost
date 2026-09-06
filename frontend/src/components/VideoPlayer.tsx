@@ -84,7 +84,6 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
                     </div>
                 ) : (
                     <video
-                        style={{ viewTransitionName: title }}
                         ref={ref}
                         src={src}
                         controls
