@@ -25,7 +25,7 @@ function showWatchProgress(
 }
 
 const HomePage = () => {
-    const { id, profile, setWatchState, unwatchPaths } =
+    const { id, profile, unwatchPath, unwatchPaths } =
         useContext(StorageContext);
     const { library, loading, error } = useContext(LibraryContext);
     const [query, setQuery] = useState('');
@@ -209,12 +209,7 @@ const HomePage = () => {
                                 watchState={watchStates[movie.path]}
                                 onUnwatch={
                                     hasWatchProgress(watchStates[movie.path])
-                                        ? () =>
-                                              setWatchState(movie.path, {
-                                                  movie_path: movie.path,
-                                                  last_position: 0,
-                                                  finished: false
-                                              })
+                                        ? () => unwatchPath(movie.path)
                                         : undefined
                                 }
                             />
@@ -241,12 +236,7 @@ const HomePage = () => {
                                 watchState={watchStates[file.path]}
                                 onUnwatch={
                                     hasWatchProgress(watchStates[file.path])
-                                        ? () =>
-                                              setWatchState(file.path, {
-                                                  movie_path: file.path,
-                                                  last_position: 0,
-                                                  finished: false
-                                              })
+                                        ? () => unwatchPath(file.path)
                                         : undefined
                                 }
                             />

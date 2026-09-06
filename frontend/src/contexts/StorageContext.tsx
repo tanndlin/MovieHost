@@ -6,6 +6,7 @@ type IStorage = {
     setID: (id: number | undefined) => void;
     profile?: Profile;
     setWatchState: (path: string, ws: WatchState) => void;
+    unwatchPath: (path: string) => void;
     unwatchPaths: (paths: string[]) => void;
 };
 
@@ -14,12 +15,33 @@ const defaultState: IStorage = {
     setID: () => {},
     profile: undefined,
     setWatchState: () => {},
+    unwatchPath: () => {},
     unwatchPaths: () => {}
 };
 
 type Props = {
     children?: React.ReactNode;
 };
+
+/** A freshly-reset (unwatched) watch state for `path`. */
+const resetWatchState = (path: string): WatchState => ({
+    movie_path: path,
+    last_position: 0,
+    finished: false
+});
+
+/** Persist a single watch state to the backend. Fire-and-forget. */
+function putWatchState(id: number | undefined, ws: WatchState) {
+    return fetch(`/api/profile/${id}/watch_state`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            movie_path: ws.movie_path,
+            last_position: ws.last_position,
+            finished: ws.finished
+        })
+    }).catch((err) => console.error(err));
+}
 
 export const StorageContext = React.createContext<IStorage>(defaultState);
 
@@ -78,6 +100,11 @@ export const StorageProvider = ({ children }: Props) => {
 
     const setWatchState = useCallback(
         (path: string, ws: WatchState) => {
+            const next: WatchState = {
+                ...ws,
+                movie_path: ws.movie_path || path
+            };
+
             setProfile((prev) => {
                 if (!prev) {
                     console.error('No profile loaded, cannot set watch state');
@@ -88,20 +115,12 @@ export const StorageProvider = ({ children }: Props) => {
                     ...prev,
                     watch_states: {
                         ...prev.watch_states,
-                        [path]: ws
+                        [path]: next
                     }
                 };
             });
 
-            fetch(`/api/profile/${id}/watch_state`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    movie_path: path,
-                    last_position: ws.last_position,
-                    finished: ws.finished
-                })
-            }).catch((err) => console.error(err));
+            putWatchState(id, next);
         },
         [id]
     );
@@ -114,11 +133,7 @@ export const StorageProvider = ({ children }: Props) => {
 
             const resetStates: Record<string, WatchState> = {};
             for (const path of paths) {
-                resetStates[path] = {
-                    movie_path: path,
-                    last_position: 0,
-                    finished: false
-                };
+                resetStates[path] = resetWatchState(path);
             }
 
             setProfile((prev) =>
@@ -134,18 +149,15 @@ export const StorageProvider = ({ children }: Props) => {
             );
 
             for (const path of paths) {
-                fetch(`/api/profile/${id}/watch_state`, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        movie_path: path,
-                        last_position: 0,
-                        finished: false
-                    })
-                }).catch((err) => console.error(err));
+                putWatchState(id, resetStates[path]);
             }
         },
         [id]
+    );
+
+    const unwatchPath = useCallback(
+        (path: string) => unwatchPaths([path]),
+        [unwatchPaths]
     );
 
     const state: IStorage = useMemo(
@@ -154,9 +166,10 @@ export const StorageProvider = ({ children }: Props) => {
             setID,
             profile,
             setWatchState,
+            unwatchPath,
             unwatchPaths
         }),
-        [id, profile, setWatchState, unwatchPaths]
+        [id, profile, setWatchState, unwatchPath, unwatchPaths]
     );
 
     return (

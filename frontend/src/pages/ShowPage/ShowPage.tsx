@@ -18,18 +18,10 @@ const ShowPage = () => {
     const showName = decodeURIComponent(name ?? '');
     const [show, setShow] = useState<Show | null>(null);
     const [openSeason, setOpenSeason] = useState<string | null>(null);
-    const { profile, setWatchState, unwatchPaths } = useContext(StorageContext);
+    const { profile, unwatchPath, unwatchPaths } = useContext(StorageContext);
     const watchStates = profile?.watch_states || {};
     const watchStatesRef = useRef(watchStates);
     watchStatesRef.current = watchStates;
-
-    const handleUnwatchEpisode = (path: string) => {
-        setWatchState(path, {
-            movie_path: path,
-            last_position: 0,
-            finished: false
-        });
-    };
 
     const handleUnwatchSeason = (season: Season) => {
         unwatchPaths(season.episodes.map((ep) => ep.path));
@@ -154,7 +146,7 @@ const ShowPage = () => {
                                 setOpenSeason,
                                 openSeason,
                                 watchStates,
-                                onUnwatchEpisode: handleUnwatchEpisode,
+                                onUnwatchEpisode: unwatchPath,
                                 onUnwatchSeason: handleUnwatchSeason
                             }}
                         />
