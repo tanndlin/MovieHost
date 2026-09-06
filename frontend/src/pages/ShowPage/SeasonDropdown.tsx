@@ -1,4 +1,4 @@
-import { Season } from '../../types';
+import { Season, WatchState } from '../../types';
 import { hasWatchProgress } from '../../utils/utils';
 import ShowItem from './ShowItem';
 
@@ -6,7 +6,7 @@ type SeasonProps = {
     season: Season;
     openSeason: string | null;
     setOpenSeason: (seasonName: string | null) => void;
-    watchStates: Record<string, { last_position: number; finished: boolean }>;
+    watchStates: Record<string, WatchState>;
     onUnwatchEpisode: (path: string) => void;
     onUnwatchSeason: (season: Season) => void;
 };

@@ -1,11 +1,11 @@
 import { ViewTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Episode } from '../../types';
+import { Episode, WatchState } from '../../types';
 import { titleTransitionName } from '../../utils/utils';
 
 type ShowItemProps = {
     ep: Episode;
-    watchStates: Record<string, { last_position: number; finished: boolean }>;
+    watchStates: Record<string, WatchState>;
     onUnwatch: (path: string) => void;
 };
 

@@ -1,3 +1,5 @@
+import { WatchState } from '../types';
+
 export function posterTransitionName(showName: string): string {
     return `show-poster-${sanitizeTransitionName(showName)}`;
 }
@@ -11,9 +13,6 @@ function sanitizeTransitionName(value: string): string {
     return value.replace(/[^a-zA-Z0-9_-]/g, '-');
 }
 
-export function hasWatchProgress(ws?: {
-    finished: boolean;
-    last_position: number;
-}): boolean {
+export function hasWatchProgress(ws?: WatchState): boolean {
     return !!ws?.finished || (ws?.last_position ?? 0) > 0;
 }
