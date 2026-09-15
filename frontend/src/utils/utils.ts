@@ -1,4 +1,4 @@
-import { WatchState, WatchStatus } from '../types';
+import { Episode, Season, Show, WatchState, WatchStatus } from '../types';
 import { API_BASE_URL } from './env';
 
 /**
@@ -37,4 +37,38 @@ export function watchStatus(ws?: WatchState): WatchStatus | undefined {
         return 'in-progress';
     }
     return undefined;
+}
+
+/** The episode to play next in a show, with whether it is a resume or a fresh start. */
+export type NextUp = {
+    episode: Episode;
+    season: Season;
+    resume: boolean;
+};
+
+/**
+ * Picks the episode "Play next" should jump to: the first partially-watched
+ * episode if there is one, otherwise the first unfinished episode in order.
+ * Returns `undefined` once every episode is finished.
+ */
+export function nextEpisode(
+    show: Show,
+    watchStates: Record<string, WatchState>
+): NextUp | undefined {
+    let firstUnfinished: NextUp | undefined;
+
+    for (const season of show.seasons) {
+        for (const episode of season.episodes) {
+            const ws = watchStates[episode.path];
+            if (ws?.finished) {
+                continue;
+            }
+            if ((ws?.last_position ?? 0) > 0) {
+                return { episode, season, resume: true };
+            }
+            firstUnfinished ??= { episode, season, resume: false };
+        }
+    }
+
+    return firstUnfinished;
 }

@@ -1,6 +1,6 @@
 import { ViewTransition } from 'react';
 import { useContext, useEffect, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import useFetch from '../../common/useFetch';
 import { LibraryContext } from '../../contexts/LibraryContext';
 import { StorageContext } from '../../contexts/StorageContext';
@@ -8,6 +8,8 @@ import { Season, Show, ShowDetailsResponse } from '../../types';
 import { API_BASE_URL } from '../../utils/env';
 import {
     hasWatchProgress,
+    NextUp,
+    nextEpisode,
     posterTransitionName,
     titleTransitionName
 } from '../../utils/utils';
@@ -15,6 +17,7 @@ import SeasonDropdown from './SeasonDropdown';
 
 const ShowPage = () => {
     const { name } = useParams<{ name: string }>();
+    const navigate = useNavigate();
     const showName = decodeURIComponent(name ?? '');
     const [show, setShow] = useState<Show | null>(null);
     const [openSeason, setOpenSeason] = useState<string | null>(null);
@@ -33,6 +36,20 @@ const ShowPage = () => {
         }
         unwatchPaths(
             show.seasons.flatMap((s) => s.episodes.map((ep) => ep.path))
+        );
+    };
+
+    // `watchStates` is a fresh object each render, so there is nothing stable
+    // to memoize against; the scan is cheap enough to just redo.
+    const nextUp = show ? nextEpisode(show, watchStates) : undefined;
+
+    const handlePlayNext = () => {
+        if (!nextUp) {
+            return;
+        }
+        const { path, name: episodeName } = nextUp.episode;
+        navigate(
+            `/player?path=${encodeURIComponent(path)}&title=${encodeURIComponent(episodeName)}`
         );
     };
 
@@ -71,8 +88,8 @@ const ShowPage = () => {
 
     return (
         <main className="max-w-screen-lg p-6 mx-auto w-full">
-            <div className="mb-8 flex gap-4 justify-between">
-                <div>
+            <div className="mb-8 flex flex-col-reverse gap-4 sm:flex-row sm:justify-between">
+                <div className="min-w-0 flex-1">
                     <Link
                         to="/"
                         className="inline-flex items-center gap-1.5 text-sm transition-colors text-white/40 hover:text-white/80 mb-4"
@@ -122,9 +139,37 @@ const ShowPage = () => {
                         </p>
                     )}
                     <p>{detailsData?.overview}</p>
+                    {nextUp && (
+                        <button
+                            onClick={handlePlayNext}
+                            title={`${nextUp.resume ? 'Resume' : 'Play'} ${nextUp.episode.name}`}
+                            className="inline-flex items-center gap-2.5 mt-5 pl-3.5 pr-4 py-2.5 rounded-lg bg-white text-black transition-colors hover:bg-white/80"
+                        >
+                            <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                                className="shrink-0"
+                            >
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            <span className="text-sm font-semibold">
+                                {nextUp.resume ? 'Resume' : 'Play next'}
+                            </span>
+                            <span className="text-xs text-black/50 truncate max-w-[16rem]">
+                                {episodeLabel(nextUp)}
+                            </span>
+                        </button>
+                    )}
                 </div>
                 <ViewTransition name={posterTransitionName(showName)}>
-                    <img id="poster" src={poster} alt="Poster" />
+                    <img
+                        id="poster"
+                        src={poster}
+                        alt="Poster"
+                        className="mx-auto shrink-0 sm:mx-0"
+                    />
                 </ViewTransition>
             </div>
 
@@ -156,5 +201,13 @@ const ShowPage = () => {
         </main>
     );
 };
+
+/** Short "Season 1 · E03 · Title" label for the play-next button. */
+function episodeLabel({ season, episode }: NextUp): string {
+    const number = episode.episode
+        ? `E${episode.episode.padStart(2, '0')}`
+        : null;
+    return [season.name, number, episode.name].filter(Boolean).join(' \u00b7 ');
+}
 
 export default ShowPage;
