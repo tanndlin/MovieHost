@@ -1,7 +1,7 @@
 import React, { useContext } from 'react';
+import { getLibrary } from '../api/client';
 import useFetch from '../common/useFetch';
 import { MediaLibrary } from '../types';
-import { API_BASE_URL } from '../utils/env';
 import { StorageContext } from './StorageContext';
 
 type ILibrary = {
@@ -24,8 +24,8 @@ type Props = {
 
 export const LibraryProvider = ({ children }: Props) => {
     const { id } = useContext(StorageContext);
-    const { data, loading, error } = useFetch<MediaLibrary>(
-        id !== undefined ? `${API_BASE_URL}/library` : null
+    const { data, loading, error } = useFetch(
+        id !== undefined ? getLibrary : null
     );
 
     return (

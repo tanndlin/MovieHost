@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useState } from 'react';
 
-export default function useFetch<T>(input: URL | RequestInfo | null) {
+/**
+ * Runs `fetcher` and tracks its loading/error/data state, or stays idle when
+ * it is `null`.
+ *
+ * `fetcher` is the effect's dependency, so it must be referentially stable —
+ * a module-level function from `src/api/client`, or wrapped in `useCallback` /
+ * `useMemo`.
+ */
+export default function useFetch<T>(fetcher: (() => Promise<T>) | null) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [data, setData] = useState<T | null>(null);
@@ -15,26 +23,22 @@ export default function useFetch<T>(input: URL | RequestInfo | null) {
         setError('');
         setData(null);
 
-        if (input === null) {
+        if (fetcher === null) {
             setLoading(false);
             return;
         }
 
-        fetch(input)
-            .then((res) => {
-                if (!res.ok) {
-                    throw new Error(res.statusText);
-                }
-                return res.json() as Promise<T>;
-            })
-            .then((json) => {
+        fetcher()
+            .then((result) => {
                 if (!ignore) {
-                    setData(json);
+                    setData(result);
                 }
             })
-            .catch((err) => {
+            .catch((err: unknown) => {
                 if (!ignore) {
-                    setError(err.message);
+                    setError(
+                        err instanceof Error ? err.message : 'Request failed'
+                    );
                 }
             })
             .finally(() => {
@@ -46,7 +50,7 @@ export default function useFetch<T>(input: URL | RequestInfo | null) {
         return () => {
             ignore = true;
         };
-    }, [input, tick]);
+    }, [fetcher, tick]);
 
     return { loading, error, data, refetch };
 }

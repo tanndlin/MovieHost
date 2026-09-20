@@ -5,6 +5,7 @@
     "dependencies": {
         "@heroicons/react": "^2.2.0",
         "@vitejs/plugin-react-swc": "^3.9.0",
+        "openapi-fetch": "^0.17.0",
         "react": "0.0.0-experimental-bfb7a768-20260811",
         "react-dom": "0.0.0-experimental-bfb7a768-20260811",
         "react-router-dom": "^6.26.1",
@@ -16,7 +17,9 @@
         "serve": "vite preview",
         "lint": "eslint src --ext .ts,.tsx",
         "format": "prettier --write .",
-        "format:check": "prettier --check ."
+        "format:check": "prettier --check .",
+        "gen:api": "openapi-typescript ../server/openapi.json -o src/generated/api.ts",
+        "gen:api:check": "mkdir -p node_modules/.cache && openapi-typescript ../server/openapi.json -o node_modules/.cache/api.check.ts && diff -u node_modules/.cache/api.check.ts src/generated/api.ts"
     },
     "eslintConfig": {
         "extends": [
@@ -54,6 +57,7 @@
         "eslint-plugin-react": "^7.35.2",
         "eslint-plugin-react-hooks": "^4.6.2",
         "jsdom": "^26.1.0",
+        "openapi-typescript": "^7.13.0",
         "postcss": "^8.4.18",
         "prettier": "^3.7.4",
         "sass": "^1.78.0",

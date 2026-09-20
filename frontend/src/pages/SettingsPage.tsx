@@ -1,5 +1,6 @@
 import { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { deleteProfile, renameProfile } from '../api/client';
 import { StorageContext } from '../contexts/StorageContext';
 
 const SettingsPage = () => {
@@ -14,24 +15,22 @@ const SettingsPage = () => {
     }, [profile]);
 
     function handleDeleteProfile() {
+        if (!profile) {
+            return;
+        }
+
         if (!window.confirm('Are you sure you want to delete your profile?')) {
             return;
         }
 
-        fetch(`/api/profile/${profile?.id}`, {
-            method: 'DELETE'
-        })
-            .then((res) => {
-                if (res.ok) {
-                    localStorage.removeItem('profileID');
-                    navigate('/');
-                } else {
-                    alert('Failed to delete profile');
-                }
+        deleteProfile(profile.id)
+            .then(() => {
+                localStorage.removeItem('profileID');
+                navigate('/');
             })
             .catch((err) => {
                 console.error(err);
-                alert('An error occurred while deleting the profile');
+                alert('Failed to delete profile');
             });
     }
 
@@ -40,24 +39,12 @@ const SettingsPage = () => {
             return;
         }
 
-        fetch(`/api/profile/${profile.id}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ username: name })
-        })
-            .then((res) => {
-                if (res.ok) {
-                    // Reload the page to fetch the updated profile
-                    window.location.reload();
-                } else {
-                    alert('Failed to rename profile');
-                }
-            })
+        renameProfile(profile.id, name)
+            // Reload the page to fetch the updated profile
+            .then(() => window.location.reload())
             .catch((err) => {
                 console.error(err);
-                alert('An error occurred while renaming the profile');
+                alert('Failed to rename profile');
             });
     }
 

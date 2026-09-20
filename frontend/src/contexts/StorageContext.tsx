@@ -1,11 +1,17 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { Profile, WatchState } from '../types';
+import {
+    ApiError,
+    createProfile as createProfileRequest,
+    getProfile,
+    putWatchState
+} from '../api/client';
+import { ProfileResponse, WatchState } from '../types';
 
 type IStorage = {
     id: number | undefined;
     setID: (id: number | undefined) => void;
     createProfile: () => void;
-    profile?: Profile;
+    profile?: ProfileResponse;
     setWatchState: (path: string, ws: WatchState) => void;
     unwatchPath: (path: string) => void;
     unwatchPaths: (paths: string[]) => void;
@@ -32,17 +38,13 @@ const resetWatchState = (path: string): WatchState => ({
     finished: false
 });
 
-/** Persist a single watch state to the backend. Fire-and-forget. */
-function putWatchState(id: number | undefined, ws: WatchState) {
-    return fetch(`/api/profile/${id}/watch_state`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            movie_path: ws.movie_path,
-            last_position: ws.last_position,
-            finished: ws.finished
-        })
-    }).catch((err) => console.error(err));
+/** Persist a single watch state. Fire-and-forget; failures are logged. */
+function persistWatchState(id: number | undefined, ws: WatchState) {
+    if (id === undefined) {
+        return;
+    }
+
+    putWatchState(id, ws).catch((err) => console.error(err));
 }
 
 export const StorageContext = React.createContext<IStorage>(defaultState);
@@ -54,7 +56,7 @@ export const StorageProvider = ({ children }: Props) => {
                   undefined
             : undefined
     );
-    const [profile, setProfile] = React.useState<Profile | undefined>(
+    const [profile, setProfile] = React.useState<ProfileResponse | undefined>(
         undefined
     );
 
@@ -67,11 +69,9 @@ export const StorageProvider = ({ children }: Props) => {
     }, [id]);
 
     const createProfile = useCallback(() => {
-        createNewProfile().then((newProfile) => {
-            if (newProfile) {
-                setID(newProfile.id);
-            }
-        });
+        createProfileRequest()
+            .then((newProfile) => setID(newProfile.id))
+            .catch((err) => console.error('Failed to create new profile', err));
     }, []);
 
     useEffect(() => {
@@ -79,22 +79,15 @@ export const StorageProvider = ({ children }: Props) => {
             return;
         }
 
-        fetch(`/api/profile/${id}`)
-            .then((res) => {
-                if (res.status === 404) {
+        getProfile(id)
+            .then(setProfile)
+            .catch((err: unknown) => {
+                if (err instanceof ApiError && err.status === 404) {
                     console.warn('Profile not found');
                     setID(undefined);
                     localStorage.removeItem('profileID');
-                    return null;
+                    return;
                 }
-                return res.json();
-            })
-            .then((data) => {
-                if (data) {
-                    setProfile(data);
-                }
-            })
-            .catch((err) => {
                 console.error(err);
             });
     }, [id]);
@@ -121,7 +114,7 @@ export const StorageProvider = ({ children }: Props) => {
                 };
             });
 
-            putWatchState(id, next);
+            persistWatchState(id, next);
         },
         [id]
     );
@@ -150,7 +143,7 @@ export const StorageProvider = ({ children }: Props) => {
             );
 
             for (const path of paths) {
-                putWatchState(id, resetStates[path]);
+                persistWatchState(id, resetStates[path]);
             }
         },
         [id]
@@ -180,15 +173,3 @@ export const StorageProvider = ({ children }: Props) => {
         </StorageContext.Provider>
     );
 };
-
-function createNewProfile() {
-    return fetch('/api/profile', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    })
-        .then((res) => res.json())
-        .catch((err) => {
-            console.error('Failed to create new profile', err);
-            return null;
-        });
-}

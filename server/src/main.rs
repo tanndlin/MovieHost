@@ -1,8 +1,8 @@
 use axum::extract::ws::{Message, WebSocket};
-use axum::extract::{Path, Query, State, WebSocketUpgrade};
-use axum::http::{Method, StatusCode, header};
-use axum::response::{IntoResponse, Response};
-use axum::routing::{delete, get, post, put};
+use axum::extract::{State, WebSocketUpgrade};
+use axum::http::Method;
+use axum::response::Response;
+use axum::routing::get;
 use axum::{Json, Router};
 use sqlx::postgres::PgPoolOptions;
 use std::collections::HashMap;
@@ -12,25 +12,35 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
+use utoipa_scalar::{Scalar, Servable};
 
-use crate::library::{handle_library, list_media_files};
-use crate::profile::{
-    handle_delete_profile, handle_get_profile, handle_get_profiles, handle_post_profile,
-    handle_put_profile,
-};
-use crate::types::{TMBDResponse, TMDBMovie, ThumbnailParams, WatchStateUpdate};
+use crate::library::list_media_files;
+use crate::openapi::api_router;
+use crate::response::{ApiError, ApiJson, ApiPath, ApiQuery, Cached, ErrorBody, Jpeg};
+use crate::types::{MovieDetails, ThumbnailParams, TmdbSearchResponse, WatchState};
 use crate::ws::websocket::handle_ws;
 
 mod library;
+mod openapi;
 mod profile;
+mod response;
 mod types;
 mod ws;
 
+/// Process-wide state. Config is resolved once at startup, so a missing
+/// environment variable fails on boot rather than inside a handler.
 struct AppState {
+    serve_dir: String,
+    tmdb_api_key: String,
+    /// Reused across requests: a fresh `Client` per call would discard the
+    /// connection pool every time.
+    http_client: reqwest::Client,
     db_pool: sqlx::Pool<sqlx::Postgres>,
     websockets: HashMap<u64, Vec<UnboundedSender<Message>>>,
-    movie_info_cache: HashMap<String, TMDBMovie>,
+    movie_info_cache: HashMap<String, MovieDetails>,
 }
+
+type SharedState = Arc<Mutex<AppState>>;
 
 #[tokio::main]
 async fn main() {
@@ -38,6 +48,10 @@ async fn main() {
 
     let database_url =
         std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable not set");
+    let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
+    let api_port = std::env::var("API_PORT").expect("API_PORT environment variable not set");
+    let tmdb_api_key =
+        std::env::var("TMDB_API_KEY").expect("TMDB_API_KEY environment variable not set");
 
     println!("Connecting to database...");
     let db_pool = PgPoolOptions::new()
@@ -52,26 +66,21 @@ async fn main() {
 
     println!("Database connected and migrations applied.");
 
-    let app_state = Arc::new(Mutex::new(AppState {
+    let app_state: SharedState = Arc::new(Mutex::new(AppState {
+        serve_dir: serve_dir.clone(),
+        tmdb_api_key,
+        http_client: reqwest::Client::new(),
         db_pool,
         websockets: HashMap::new(),
         movie_info_cache: HashMap::new(),
     }));
 
-    let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
-    let api_port = std::env::var("API_PORT").expect("API_PORT environment variable not set");
+    let (api, openapi) = api_router();
 
     let app = Router::new()
-        .route("/api/ls", get(handle_ls))
-        .route("/api/library", get(handle_library))
-        .route("/api/thumbnail", get(handle_thumbnail))
-        .route("/api/details", get(handle_details))
-        .route("/api/profile", post(handle_post_profile))
-        .route("/api/profiles", get(handle_get_profiles))
-        .route("/api/profile/{id}", get(handle_get_profile))
-        .route("/api/profile/{id}", put(handle_put_profile))
-        .route("/api/profile/{id}", delete(handle_delete_profile))
-        .route("/api/profile/{id}/watch_state", put(handle_put_watch_state))
+        .merge(api)
+        .merge(Scalar::with_url("/scalar", openapi))
+        // Not an HTTP operation, so it is registered outside the OpenAPI router.
         .route("/ws", get(ws_handler))
         .nest_service("/api/media", ServeDir::new(&serve_dir))
         .with_state(app_state);
@@ -80,7 +89,7 @@ async fn main() {
         app.layer(
             CorsLayer::new()
                 .allow_origin(Any)
-                .allow_methods([Method::GET, Method::POST, Method::PUT])
+                .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
                 .allow_headers(Any),
         )
     } else {
@@ -92,12 +101,20 @@ async fn main() {
         .unwrap();
     let ip = listener.local_addr().unwrap();
     println!("Server running on http://{ip}");
+    println!("API reference at http://{ip}/scalar");
     axum::serve(listener, app).await.unwrap();
 }
 
-async fn handle_ls() -> String {
-    let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
-    serde_json::to_string(&list_media_files(&serve_dir)).unwrap()
+/// Every media file under the media root, as paths relative to it.
+#[utoipa::path(
+    get,
+    path = "/api/ls",
+    tag = "library",
+    responses((status = 200, description = "Relative media paths", body = Vec<String>)),
+)]
+pub(crate) async fn handle_ls(State(state): State<SharedState>) -> Json<Vec<String>> {
+    let serve_dir = state.lock().unwrap().serve_dir.clone();
+    Json(list_media_files(&serve_dir))
 }
 
 fn path_hash(path: &str) -> u64 {
@@ -113,59 +130,75 @@ const THUMBNAIL_CACHE_CONTROL: &str = "public, max-age=604800, immutable";
 /// shorter TTL than the poster image.
 const DETAILS_CACHE_CONTROL: &str = "public, max-age=86400";
 
-async fn handle_thumbnail(
-    State(state): State<Arc<Mutex<AppState>>>,
-    Query(params): Query<ThumbnailParams>,
-) -> impl IntoResponse {
-    dbg!("Requested thumbnail for path: {}", &params.path);
-
+/// Poster image for a media path, proxied and cached from TMDB.
+#[utoipa::path(
+    get,
+    path = "/api/thumbnail",
+    tag = "media",
+    params(ThumbnailParams),
+    responses(
+        (status = 200, description = "Poster image", content_type = "image/jpeg", body = Vec<u8>),
+        (status = 400, description = "Missing or malformed query", body = ErrorBody),
+        (status = 404, description = "No artwork for this path", body = ErrorBody),
+    ),
+)]
+pub(crate) async fn handle_thumbnail(
+    State(state): State<SharedState>,
+    ApiQuery(params): ApiQuery<ThumbnailParams>,
+) -> Result<Cached<Jpeg>, ApiError> {
     let thumb_path = format!("/tmp/thumb_{:x}.jpg", path_hash(&params.path));
 
-    let thumbnail_headers = [
-        (header::CONTENT_TYPE, "image/jpeg"),
-        (header::CACHE_CONTROL, THUMBNAIL_CACHE_CONTROL),
-    ];
-
     if let Ok(bytes) = tokio::fs::read(&thumb_path).await {
-        return (thumbnail_headers, bytes).into_response();
+        return Ok(Cached::new(THUMBNAIL_CACHE_CONTROL, Jpeg(bytes)));
     }
 
-    // Check movie info cache first
-    let movie_info = {
-        let state_guard = state.lock().unwrap();
-        state_guard.movie_info_cache.get(&params.path).cloned()
-    };
+    let movie_info = movie_details(&state, &params.path).await?;
 
-    let movie_info = match movie_info {
-        Some(info) => info,
-        None => {
-            if let Some(info) = get_movie_info_from_tmdb(&params.path).await {
-                // Cache the movie info
-                let mut state_guard = state.lock().unwrap();
-                state_guard
-                    .movie_info_cache
-                    .insert(params.path.clone(), info);
-                state_guard
-                    .movie_info_cache
-                    .get(&params.path)
-                    .cloned()
-                    .unwrap()
-            } else {
-                eprintln!("Movie info not found for path: {}", params.path);
-                return StatusCode::NOT_FOUND.into_response();
-            }
-        }
-    };
+    let bytes = fetch_poster(&state, &movie_info)
+        .await
+        .ok_or(ApiError::NotFound)?;
+    let _ = tokio::fs::write(&thumb_path, &bytes).await;
 
-    if let Some(bytes) = get_thumbnail_from_tmdb(&movie_info).await {
-        let _ = tokio::fs::write(&thumb_path, &bytes).await;
-        return (thumbnail_headers, bytes).into_response();
-    }
-
-    StatusCode::NOT_FOUND.into_response()
+    Ok(Cached::new(THUMBNAIL_CACHE_CONTROL, Jpeg(bytes)))
 }
 
-async fn get_movie_info_from_tmdb(path: &str) -> Option<TMDBMovie> {
+/// Title metadata for a media path.
+#[utoipa::path(
+    get,
+    path = "/api/details",
+    tag = "media",
+    params(ThumbnailParams),
+    responses(
+        (status = 200, description = "Title metadata", body = MovieDetails),
+        (status = 400, description = "Missing or malformed query", body = ErrorBody),
+        (status = 404, description = "No metadata for this path", body = ErrorBody),
+    ),
+)]
+pub(crate) async fn handle_details(
+    State(state): State<SharedState>,
+    ApiQuery(params): ApiQuery<ThumbnailParams>,
+) -> Result<Cached<Json<MovieDetails>>, ApiError> {
+    let movie_info = movie_details(&state, &params.path).await?;
+    Ok(Cached::new(DETAILS_CACHE_CONTROL, Json(movie_info)))
+}
+
+/// Cache-backed TMDB lookup shared by the thumbnail and details handlers.
+async fn movie_details(state: &SharedState, path: &str) -> Result<MovieDetails, ApiError> {
+    if let Some(cached) = state.lock().unwrap().movie_info_cache.get(path).cloned() {
+        return Ok(cached);
+    }
+
+    let info = search_tmdb(state, path).await.ok_or(ApiError::NotFound)?;
+    state
+        .lock()
+        .unwrap()
+        .movie_info_cache
+        .insert(path.to_owned(), info.clone());
+
+    Ok(info)
+}
+
+async fn search_tmdb(state: &SharedState, path: &str) -> Option<MovieDetails> {
     let media_type = if path.to_lowercase().starts_with("movie") {
         "movie"
     } else if path.to_lowercase().starts_with("show") {
@@ -177,38 +210,54 @@ async fn get_movie_info_from_tmdb(path: &str) -> Option<TMDBMovie> {
     let filename = path.rsplit('/').next().unwrap_or(path);
     let title = filename.split('.').next().unwrap_or(filename);
 
-    let tmdb_api_key =
-        std::env::var("TMDB_API_KEY").expect("TMDB_API_KEY environment variable not set");
-    let client = reqwest::Client::new();
+    let (client, api_key) = {
+        let guard = state.lock().unwrap();
+        (guard.http_client.clone(), guard.tmdb_api_key.clone())
+    };
+
     let url = reqwest::Url::parse_with_params(
         format!("https://api.themoviedb.org/3/search/{media_type}").as_str(),
-        &[("api_key", tmdb_api_key.as_str()), ("query", title)],
+        &[("api_key", api_key.as_str()), ("query", title)],
     )
-    .unwrap();
+    .ok()?;
 
     let response = client.get(url).send().await.ok()?;
     let resp_text = response.text().await.ok()?;
-    let tmdb_response: TMBDResponse = serde_json::from_str(&resp_text).ok()?;
+    let tmdb_response: TmdbSearchResponse = serde_json::from_str(&resp_text).ok()?;
     tmdb_response.results.into_iter().next()
 }
 
-async fn get_thumbnail_from_tmdb(movie_info: &TMDBMovie) -> Option<Vec<u8>> {
+async fn fetch_poster(state: &SharedState, movie_info: &MovieDetails) -> Option<Vec<u8>> {
     let poster_path = movie_info.poster_path.as_ref()?;
     let poster_url = format!("https://image.tmdb.org/t/p/w500{poster_path}");
 
-    let client = reqwest::Client::new();
+    let client = state.lock().unwrap().http_client.clone();
     let poster_response = client.get(&poster_url).send().await.ok()?;
     let poster_bytes = poster_response.bytes().await.ok()?;
     Some(poster_bytes.to_vec())
 }
 
-async fn handle_put_watch_state(
-    State(state): State<Arc<Mutex<AppState>>>,
-    Path(id): Path<i32>,
-    Json(payload): Json<WatchStateUpdate>,
-) -> impl IntoResponse {
+/// Record how far a profile got through one piece of media.
+#[utoipa::path(
+    put,
+    path = "/api/profile/{id}/watch_state",
+    tag = "profiles",
+    params(("id" = i32, Path, description = "Profile id")),
+    request_body = WatchState,
+    responses(
+        (status = 204, description = "Watch state saved"),
+        (status = 400, description = "Malformed id or body", body = ErrorBody),
+        (status = 500, description = "Database error", body = ErrorBody),
+    ),
+)]
+pub(crate) async fn handle_put_watch_state(
+    State(state): State<SharedState>,
+    ApiPath(id): ApiPath<i32>,
+    ApiJson(payload): ApiJson<WatchState>,
+) -> Result<axum::http::StatusCode, ApiError> {
     let db_pool = state.lock().unwrap().db_pool.clone();
-    let result = sqlx::query(
+
+    sqlx::query(
         "INSERT INTO watched_movies (user_id, movie_path, last_position, finished)
          VALUES ($1, $2, $3, $4)
          ON CONFLICT (user_id, movie_path)
@@ -219,58 +268,15 @@ async fn handle_put_watch_state(
     .bind(payload.last_position)
     .bind(payload.finished)
     .execute(&db_pool)
-    .await;
+    .await?;
 
-    match result {
-        Ok(_) => StatusCode::OK.into_response(),
-        Err(e) => {
-            eprintln!("Database error: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    Ok(axum::http::StatusCode::NO_CONTENT)
 }
 
-async fn handle_details(
-    State(state): State<Arc<Mutex<AppState>>>,
-    Query(params): Query<ThumbnailParams>,
-) -> impl IntoResponse {
-    let movie_info = {
-        let state_guard = state.lock().unwrap();
-        state_guard.movie_info_cache.get(&params.path).cloned()
-    };
-
-    let movie_info = match movie_info {
-        Some(info) => info,
-        None => {
-            match get_movie_info_from_tmdb(&params.path).await {
-                Some(info) => {
-                    // Cache the movie info
-                    let mut state_guard = state.lock().unwrap();
-                    state_guard
-                        .movie_info_cache
-                        .insert(params.path.clone(), info);
-                    state_guard
-                        .movie_info_cache
-                        .get(&params.path)
-                        .cloned()
-                        .unwrap()
-                }
-                None => return StatusCode::NOT_FOUND.into_response(),
-            }
-        }
-    };
-
-    (
-        [(header::CACHE_CONTROL, DETAILS_CACHE_CONTROL)],
-        Json(movie_info),
-    )
-        .into_response()
-}
-
-async fn ws_handler(ws: WebSocketUpgrade, State(state): State<Arc<Mutex<AppState>>>) -> Response {
+async fn ws_handler(ws: WebSocketUpgrade, State(state): State<SharedState>) -> Response {
     ws.on_upgrade(move |socket| handle_socket(socket, state))
 }
 
-async fn handle_socket(socket: WebSocket, state: Arc<Mutex<AppState>>) {
+async fn handle_socket(socket: WebSocket, state: SharedState) {
     handle_ws(socket, state).await;
 }

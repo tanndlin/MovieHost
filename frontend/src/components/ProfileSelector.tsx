@@ -1,21 +1,12 @@
 import { useContext, useEffect } from 'react';
+import { listProfiles } from '../api/client';
 import useFetch from '../common/useFetch';
 import { StorageContext } from '../contexts/StorageContext';
-
-type Profile = {
-    id: number;
-    username: string;
-};
 
 const ProfileSelector = () => {
     const { id, setID, createProfile } = useContext(StorageContext);
 
-    const {
-        loading,
-        error,
-        data: profiles,
-        refetch
-    } = useFetch<Profile[]>('/api/profiles');
+    const { loading, error, data: profiles, refetch } = useFetch(listProfiles);
 
     useEffect(() => {
         refetch();

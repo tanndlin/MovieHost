@@ -1,56 +1,25 @@
-export type MediaFile = {
-    path: string;
-    name: string;
-    ext: string;
-};
+/**
+ * Wire types, re-exported from the generated client. Regenerate with
+ * `npm run gen:api` after changing a handler.
+ */
+import type { components } from './generated/api';
 
-export type Episode = {
-    name: string;
-    path: string;
-    season: string;
-    episode: string | null;
-};
+type Schemas = components['schemas'];
 
-export type Season = {
-    name: string;
-    episodes: Episode[];
-};
+export type MediaFile = Schemas['MediaFile'];
+export type Episode = Schemas['Episode'];
+export type Season = Schemas['Season'];
+export type Show = Schemas['Show'];
+export type Movie = Schemas['Movie'];
+export type MediaLibrary = Schemas['MediaLibrary'];
+export type WatchState = Schemas['WatchState'];
 
-export type Show = {
-    name: string;
-    basePath: string;
-    seasons: Season[];
-};
+/** A profile without its watch states, as listed by `/api/profiles`. */
+export type Profile = Schemas['Profile'];
+/** A profile with its watch states, as returned by `/api/profile/{id}`. */
+export type ProfileResponse = Schemas['ProfileResponse'];
 
-export type Movie = {
-    name: string;
-    path: string;
-};
-
-export type MediaLibrary = {
-    shows: Show[];
-    movies: Movie[];
-    other: MediaFile[];
-};
-
-export type WatchState = {
-    last_position: number;
-    finished: boolean;
-    movie_path: string;
-};
+export type MovieDetails = Schemas['MovieDetails'];
 
 /** Coarse watch status derived from a `WatchState`, for badge rendering. */
 export type WatchStatus = 'finished' | 'in-progress';
-
-export type Profile = {
-    id: string;
-    username: string;
-    watch_states: {
-        [showName: string]: WatchState;
-    };
-};
-
-export type ShowDetailsResponse = {
-    overview: string;
-    release_date: string;
-};

@@ -1,0 +1,885 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "MovieHost API",
+    "description": "Media library, playback progress, and viewer profiles.",
+    "license": {
+      "name": ""
+    },
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/api/details": {
+      "get": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Title metadata for a media path.",
+        "operationId": "handle_details",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "description": "Media path relative to the server's media root.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Movies/Arrival.mkv"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Title metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MovieDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or malformed query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No metadata for this path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library": {
+      "get": {
+        "tags": [
+          "library"
+        ],
+        "summary": "The parsed media library: shows grouped into seasons, plus movies and\nanything that matched neither layout convention.",
+        "operationId": "handle_library",
+        "responses": {
+          "200": {
+            "description": "Parsed media library",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MediaLibrary"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ls": {
+      "get": {
+        "tags": [
+          "library"
+        ],
+        "summary": "Every media file under the media root, as paths relative to it.",
+        "operationId": "handle_ls",
+        "responses": {
+          "200": {
+            "description": "Relative media paths",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile": {
+      "post": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Create a profile with a generated `UserN` username.",
+        "operationId": "handle_post_profile",
+        "responses": {
+          "201": {
+            "description": "Profile created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Profile"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/{id}": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Fetch one profile together with every watch state it owns.",
+        "operationId": "handle_get_profile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Profile id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Profile and watch states",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProfileResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Malformed id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Rename a profile.",
+        "operationId": "handle_put_profile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Profile id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProfileUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Profile renamed"
+          },
+          "400": {
+            "description": "Malformed id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Delete a profile. Its watch states cascade.",
+        "operationId": "handle_delete_profile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Profile id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Profile deleted"
+          },
+          "400": {
+            "description": "Malformed id",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such profile",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profile/{id}/watch_state": {
+      "put": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "Record how far a profile got through one piece of media.",
+        "operationId": "handle_put_watch_state",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "Profile id",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchState"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Watch state saved"
+          },
+          "400": {
+            "description": "Malformed id or body",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/profiles": {
+      "get": {
+        "tags": [
+          "profiles"
+        ],
+        "summary": "List every profile, without watch states.",
+        "operationId": "handle_get_profiles",
+        "responses": {
+          "200": {
+            "description": "All profiles",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Profile"
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Database error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/thumbnail": {
+      "get": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Poster image for a media path, proxied and cached from TMDB.",
+        "operationId": "handle_thumbnail",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "description": "Media path relative to the server's media root.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Movies/Arrival.mkv"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Poster image",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or malformed query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No artwork for this path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ControlAction": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Play"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Pause"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "seek",
+              "type"
+            ],
+            "properties": {
+              "seek": {
+                "type": "number",
+                "format": "double"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "Seek"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "ControlMessage": {
+        "type": "object",
+        "required": [
+          "userId",
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/ControlAction"
+          },
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "Episode": {
+        "type": "object",
+        "required": [
+          "name",
+          "path",
+          "season"
+        ],
+        "properties": {
+          "episode": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          },
+          "season": {
+            "type": "string"
+          }
+        }
+      },
+      "ErrorBody": {
+        "type": "object",
+        "description": "JSON body returned for every error response.",
+        "required": [
+          "error"
+        ],
+        "properties": {
+          "error": {
+            "type": "string",
+            "description": "Human-readable description of what went wrong.",
+            "example": "Not found"
+          }
+        }
+      },
+      "HandshakeMessage": {
+        "type": "object",
+        "required": [
+          "userId"
+        ],
+        "properties": {
+          "userId": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
+      "MediaFile": {
+        "type": "object",
+        "required": [
+          "path",
+          "name",
+          "ext"
+        ],
+        "properties": {
+          "ext": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "MediaLibrary": {
+        "type": "object",
+        "required": [
+          "shows",
+          "movies",
+          "other"
+        ],
+        "properties": {
+          "movies": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Movie"
+            }
+          },
+          "other": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MediaFile"
+            }
+          },
+          "shows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Show"
+            }
+          }
+        }
+      },
+      "Movie": {
+        "type": "object",
+        "required": [
+          "name",
+          "path"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "path": {
+            "type": "string"
+          }
+        }
+      },
+      "MovieDetails": {
+        "type": "object",
+        "description": "Metadata for one title, as served by `/api/details`.",
+        "properties": {
+          "overview": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "poster_path": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "TMDB-relative poster path, absent when TMDB has no artwork."
+          },
+          "release_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "Profile": {
+        "type": "object",
+        "description": "A viewer profile, without its watch states.",
+        "required": [
+          "id",
+          "username"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "ProfileResponse": {
+        "type": "object",
+        "description": "A single profile plus every watch state it owns, keyed by media path.",
+        "required": [
+          "id",
+          "username",
+          "watch_states"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "username": {
+            "type": "string"
+          },
+          "watch_states": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WatchState"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ProfileUpdate": {
+        "type": "object",
+        "description": "Request body for renaming a profile.",
+        "required": [
+          "username"
+        ],
+        "properties": {
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "Season": {
+        "type": "object",
+        "required": [
+          "name",
+          "episodes"
+        ],
+        "properties": {
+          "episodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Episode"
+            }
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "Show": {
+        "type": "object",
+        "required": [
+          "name",
+          "basePath",
+          "seasons"
+        ],
+        "properties": {
+          "basePath": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "seasons": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Season"
+            }
+          }
+        }
+      },
+      "WatchState": {
+        "type": "object",
+        "description": "How far a profile got through one piece of media. Doubles as the request\nbody for `PUT /api/profile/{id}/watch_state`.",
+        "required": [
+          "movie_path",
+          "last_position",
+          "finished"
+        ],
+        "properties": {
+          "finished": {
+            "type": "boolean"
+          },
+          "last_position": {
+            "type": "number",
+            "format": "float",
+            "description": "Playback position in seconds."
+          },
+          "movie_path": {
+            "type": "string"
+          }
+        }
+      },
+      "WsClientMessage": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ControlMessage"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Control"
+                    ]
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/HandshakeMessage"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Handshake"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "WsServerMessage": {
+        "oneOf": [
+          {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/ControlMessage"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "Control"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "library",
+      "description": "Browsing what is on disk"
+    },
+    {
+      "name": "media",
+      "description": "Artwork and title metadata"
+    },
+    {
+      "name": "profiles",
+      "description": "Viewers and their playback progress"
+    }
+  ]
+}

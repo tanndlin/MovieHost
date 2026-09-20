@@ -33,6 +33,16 @@ pipeline {
             }
         }
 
+        // Fails if a handler changed without `npm run gen:api` being re-run.
+        stage('Check Generated API Types') {
+            steps {
+                sh '''
+                docker run --rm $DOCKER_VOLS -w $WORKSPACE/frontend $NODE_IMAGE \
+                    sh -c "npm run gen:api:check"
+                '''
+            }
+        }
+
         stage('Lint Frontend') {
             steps {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {

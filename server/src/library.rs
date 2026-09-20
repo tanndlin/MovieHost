@@ -1,14 +1,18 @@
 use std::cmp::Ordering;
 use std::collections::HashMap;
 
-use axum::{Json, response::IntoResponse};
+use axum::Json;
+use axum::extract::State;
 use serde::Serialize;
+use utoipa::ToSchema;
+
+use crate::SharedState;
 
 const VIDEO_EXTENSIONS: &[&str] = &[
     "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "mpg", "mpeg", "ts", "m2ts",
 ];
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 // Field names mirror the frontend `Episode` type, so `episode` stays `episode`.
 #[allow(clippy::struct_field_names)]
 pub struct Episode {
@@ -18,13 +22,13 @@ pub struct Episode {
     pub episode: Option<String>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct Season {
     pub name: String,
     pub episodes: Vec<Episode>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct Show {
     pub name: String,
@@ -32,20 +36,20 @@ pub struct Show {
     pub seasons: Vec<Season>,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct Movie {
     pub name: String,
     pub path: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct MediaFile {
     pub path: String,
     pub name: String,
     pub ext: String,
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 pub struct MediaLibrary {
     pub shows: Vec<Show>,
     pub movies: Vec<Movie>,
@@ -72,8 +76,16 @@ pub fn list_media_files(serve_dir: &str) -> Vec<String> {
     entries
 }
 
-pub async fn handle_library() -> impl IntoResponse {
-    let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
+/// The parsed media library: shows grouped into seasons, plus movies and
+/// anything that matched neither layout convention.
+#[utoipa::path(
+    get,
+    path = "/api/library",
+    tag = "library",
+    responses((status = 200, description = "Parsed media library", body = MediaLibrary)),
+)]
+pub async fn handle_library(State(state): State<SharedState>) -> Json<MediaLibrary> {
+    let serve_dir = state.lock().unwrap().serve_dir.clone();
     Json(parse_media_library(&list_media_files(&serve_dir)))
 }
 

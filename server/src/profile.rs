@@ -1,148 +1,160 @@
-use std::sync::{Arc, Mutex};
-
-use axum::{
-    Json,
-    extract::{Path, State},
-    http::{StatusCode, header},
-    response::IntoResponse,
-};
+use axum::{Json, extract::State, http::StatusCode};
 
 use crate::{
-    AppState,
-    types::{Profile, ProfileUpdate, WatchState},
+    SharedState,
+    response::{ApiError, ApiJson, ApiPath, ErrorBody},
+    types::{Profile, ProfileResponse, ProfileUpdate, WatchState},
 };
 
-pub async fn handle_post_profile(State(state): State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
+/// Create a profile with a generated `UserN` username.
+#[utoipa::path(
+    post,
+    path = "/api/profile",
+    tag = "profiles",
+    responses(
+        (status = 201, description = "Profile created", body = Profile),
+        (status = 500, description = "Database error", body = ErrorBody),
+    ),
+)]
+pub async fn handle_post_profile(
+    State(state): State<SharedState>,
+) -> Result<(StatusCode, Json<Profile>), ApiError> {
     let db_pool = state.lock().unwrap().db_pool.clone();
 
-    match sqlx::query_as::<_, Profile>(
-        "INSERT INTO users (username) VALUES (CONCAT('User', nextval('users_id_seq'))) RETURNING id, username"
+    let profile = sqlx::query_as::<_, Profile>(
+        "INSERT INTO users (username) VALUES (CONCAT('User', nextval('users_id_seq'))) RETURNING id, username",
     )
     .fetch_one(&db_pool)
-    .await
-    {
-        Ok(profile) => (
-            [(header::CONTENT_TYPE, "application/json")],
-            serde_json::to_string(&profile).unwrap(),
-        ).into_response(),
-        Err(e) => {
-            eprintln!("Database error: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    .await?;
+
+    Ok((StatusCode::CREATED, Json(profile)))
 }
 
+/// Fetch one profile together with every watch state it owns.
+#[utoipa::path(
+    get,
+    path = "/api/profile/{id}",
+    tag = "profiles",
+    params(("id" = i32, Path, description = "Profile id")),
+    responses(
+        (status = 200, description = "Profile and watch states", body = ProfileResponse),
+        (status = 400, description = "Malformed id", body = ErrorBody),
+        (status = 404, description = "No such profile", body = ErrorBody),
+        (status = 500, description = "Database error", body = ErrorBody),
+    ),
+)]
 pub async fn handle_get_profile(
-    State(state): State<Arc<Mutex<AppState>>>,
-    Path(id): Path<i32>,
-) -> impl IntoResponse {
+    State(state): State<SharedState>,
+    ApiPath(id): ApiPath<i32>,
+) -> Result<Json<ProfileResponse>, ApiError> {
     let db_pool = state.lock().unwrap().db_pool.clone();
 
-    let user = sqlx::query_as::<_, Profile>("SELECT id, username FROM users WHERE id = $1")
+    // `RowNotFound` converts to a 404 via `From<sqlx::Error>`.
+    let profile = sqlx::query_as::<_, Profile>("SELECT id, username FROM users WHERE id = $1")
         .bind(id)
         .fetch_one(&db_pool)
-        .await;
-
-    let profile = match user {
-        Ok(p) => p,
-        Err(sqlx::Error::RowNotFound) => return StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            eprintln!("Database error: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
+        .await?;
 
     let watch_states = sqlx::query_as::<_, WatchState>(
         "SELECT movie_path, last_position, finished FROM watched_movies WHERE user_id = $1",
     )
     .bind(id)
     .fetch_all(&db_pool)
-    .await;
+    .await?;
 
-    let watch_states = match watch_states {
-        Ok(ws) => ws,
-        Err(e) => {
-            eprintln!("Database error: {e}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
-        }
-    };
-
-    let response = serde_json::json!({
-        "id": profile.id,
-        "username": profile.username,
-        "watch_states": watch_states
+    Ok(Json(ProfileResponse {
+        id: profile.id,
+        username: profile.username,
+        watch_states: watch_states
             .into_iter()
-            .map(|ws| (ws.movie_path.clone(), serde_json::json!({
-                "last_position": ws.last_position,
-                "finished": ws.finished,
-            })))
-            .collect::<std::collections::HashMap<_, _>>()
-    });
-
-    (
-        [(header::CONTENT_TYPE, "application/json")],
-        serde_json::to_string(&response).unwrap(),
-    )
-        .into_response()
+            .map(|ws| (ws.movie_path.clone(), ws))
+            .collect(),
+    }))
 }
 
+/// Delete a profile. Its watch states cascade.
+#[utoipa::path(
+    delete,
+    path = "/api/profile/{id}",
+    tag = "profiles",
+    params(("id" = i32, Path, description = "Profile id")),
+    responses(
+        (status = 204, description = "Profile deleted"),
+        (status = 400, description = "Malformed id", body = ErrorBody),
+        (status = 404, description = "No such profile", body = ErrorBody),
+        (status = 500, description = "Database error", body = ErrorBody),
+    ),
+)]
 pub async fn handle_delete_profile(
-    State(state): State<Arc<Mutex<AppState>>>,
-    Path(id): Path<i32>,
-) -> impl IntoResponse {
+    State(state): State<SharedState>,
+    ApiPath(id): ApiPath<i32>,
+) -> Result<StatusCode, ApiError> {
     let db_pool = state.lock().unwrap().db_pool.clone();
+
     let result = sqlx::query("DELETE FROM users WHERE id = $1")
         .bind(id)
         .execute(&db_pool)
-        .await;
+        .await?;
 
-    match result {
-        Ok(r) if r.rows_affected() > 0 => StatusCode::OK.into_response(),
-        Ok(_) => StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            eprintln!("Database error: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+    if result.rows_affected() == 0 {
+        return Err(ApiError::NotFound);
     }
+
+    Ok(StatusCode::NO_CONTENT)
 }
 
-pub async fn handle_get_profiles(State(state): State<Arc<Mutex<AppState>>>) -> impl IntoResponse {
+/// List every profile, without watch states.
+#[utoipa::path(
+    get,
+    path = "/api/profiles",
+    tag = "profiles",
+    responses(
+        (status = 200, description = "All profiles", body = Vec<Profile>),
+        (status = 500, description = "Database error", body = ErrorBody),
+    ),
+)]
+pub async fn handle_get_profiles(
+    State(state): State<SharedState>,
+) -> Result<Json<Vec<Profile>>, ApiError> {
     let db_pool = state.lock().unwrap().db_pool.clone();
+
     let profiles = sqlx::query_as::<_, Profile>("SELECT id, username FROM users")
         .fetch_all(&db_pool)
-        .await;
+        .await?;
 
-    match profiles {
-        Ok(profiles) => (
-            [(header::CONTENT_TYPE, "application/json")],
-            serde_json::to_string(&profiles).unwrap(),
-        )
-            .into_response(),
-        Err(e) => {
-            eprintln!("Database error: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
-    }
+    Ok(Json(profiles))
 }
 
+/// Rename a profile.
+#[utoipa::path(
+    put,
+    path = "/api/profile/{id}",
+    tag = "profiles",
+    params(("id" = i32, Path, description = "Profile id")),
+    request_body = ProfileUpdate,
+    responses(
+        (status = 204, description = "Profile renamed"),
+        (status = 400, description = "Malformed id", body = ErrorBody),
+        (status = 404, description = "No such profile", body = ErrorBody),
+        (status = 500, description = "Database error", body = ErrorBody),
+    ),
+)]
 pub async fn handle_put_profile(
-    State(state): State<Arc<Mutex<AppState>>>,
-    Path(id): Path<i32>,
-    Json(payload): Json<ProfileUpdate>,
-) -> impl IntoResponse {
+    State(state): State<SharedState>,
+    ApiPath(id): ApiPath<i32>,
+    ApiJson(payload): ApiJson<ProfileUpdate>,
+) -> Result<StatusCode, ApiError> {
     let db_pool = state.lock().unwrap().db_pool.clone();
+
     let result = sqlx::query("UPDATE users SET username = $1 WHERE id = $2")
         .bind(&payload.username)
         .bind(id)
         .execute(&db_pool)
-        .await;
+        .await?;
 
-    match result {
-        Ok(r) if r.rows_affected() > 0 => StatusCode::OK.into_response(),
-        Ok(_) => StatusCode::NOT_FOUND.into_response(),
-        Err(e) => {
-            eprintln!("Database error: {e}");
-            StatusCode::INTERNAL_SERVER_ERROR.into_response()
-        }
+    if result.rows_affected() == 0 {
+        return Err(ApiError::NotFound);
     }
+
+    Ok(StatusCode::NO_CONTENT)
 }

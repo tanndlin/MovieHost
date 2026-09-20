@@ -1,10 +1,11 @@
 import { ViewTransition } from 'react';
-import { useContext, useEffect, useRef, useState } from 'react';
+import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import useFetch from '../../common/useFetch';
 import { LibraryContext } from '../../contexts/LibraryContext';
 import { StorageContext } from '../../contexts/StorageContext';
-import { Season, Show, ShowDetailsResponse } from '../../types';
+import { getDetails } from '../../api/client';
+import { Season, Show } from '../../types';
 import { API_BASE_URL } from '../../utils/env';
 import {
     hasWatchProgress,
@@ -62,11 +63,11 @@ const ShowPage = () => {
     // Derived directly from the route param so the poster can render (and
     // participate in the view transition) before the library fetch resolves.
     const basePath = `Shows/${showName}`;
-    const { data: detailsData } = useFetch<ShowDetailsResponse>(
-        showName
-            ? `${API_BASE_URL}/details?path=${encodeURIComponent(basePath)}`
-            : null
+    const fetchDetails = useMemo(
+        () => (showName ? () => getDetails(basePath) : null),
+        [showName, basePath]
     );
+    const { data: detailsData } = useFetch(fetchDetails);
     const poster = `${API_BASE_URL}/thumbnail?path=${encodeURIComponent(basePath)}`;
 
     useEffect(() => {

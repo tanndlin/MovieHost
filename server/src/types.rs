@@ -1,43 +1,62 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
+use utoipa::{IntoParams, ToSchema};
 
-#[derive(Deserialize)]
+/// Query string shared by `/api/thumbnail` and `/api/details`.
+// `parameter_in` is stated rather than inferred: utoipa only infers it from a
+// bare `axum::extract::Query<T>` in the handler signature, and these handlers
+// use the `ApiQuery` wrapper.
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
 pub struct ThumbnailParams {
+    /// Media path relative to the server's media root.
+    #[param(example = "Movies/Arrival.mkv")]
     pub path: String,
 }
 
-#[derive(Serialize, FromRow)]
+/// A viewer profile, without its watch states.
+#[derive(Serialize, FromRow, ToSchema)]
 pub struct Profile {
     pub id: i32,
     pub username: String,
 }
 
-#[derive(Deserialize)]
+/// A single profile plus every watch state it owns, keyed by media path.
+#[derive(Serialize, ToSchema)]
+pub struct ProfileResponse {
+    pub id: i32,
+    pub username: String,
+    pub watch_states: HashMap<String, WatchState>,
+}
+
+/// Request body for renaming a profile.
+#[derive(Deserialize, ToSchema)]
 pub struct ProfileUpdate {
     pub username: String,
 }
 
-#[derive(Deserialize, Serialize, FromRow)]
+/// How far a profile got through one piece of media. Doubles as the request
+/// body for `PUT /api/profile/{id}/watch_state`.
+#[derive(Deserialize, Serialize, FromRow, ToSchema)]
 pub struct WatchState {
     pub movie_path: String,
+    /// Playback position in seconds.
     pub last_position: f32,
     pub finished: bool,
 }
 
+/// Search envelope returned by TMDB. Internal: never leaves this server.
 #[derive(Deserialize)]
-pub struct WatchStateUpdate {
-    pub movie_path: String,
-    pub last_position: f32,
-    pub finished: bool,
+pub struct TmdbSearchResponse {
+    pub results: Vec<MovieDetails>,
 }
 
-#[derive(Deserialize)]
-pub struct TMBDResponse {
-    pub results: Vec<TMDBMovie>,
-}
-
-#[derive(Clone, Deserialize, Serialize)]
-pub struct TMDBMovie {
+/// Metadata for one title, as served by `/api/details`.
+#[derive(Clone, Deserialize, Serialize, ToSchema)]
+pub struct MovieDetails {
+    /// TMDB-relative poster path, absent when TMDB has no artwork.
     pub poster_path: Option<String>,
     pub overview: Option<String>,
     #[serde(alias = "first_air_date")]
