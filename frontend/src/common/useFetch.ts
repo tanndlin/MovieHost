@@ -1,5 +1,12 @@
 import { useCallback, useEffect, useState } from 'react';
 
+type Settled<T> = {
+    fetcher: (() => Promise<T>) | null;
+    tick: number;
+    data: T | null;
+    error: string;
+};
+
 /**
  * Runs `fetcher` and tracks its loading/error/data state, or stays idle when
  * it is `null`.
@@ -9,41 +16,39 @@ import { useCallback, useEffect, useState } from 'react';
  * `useMemo`.
  */
 export default function useFetch<T>(fetcher: (() => Promise<T>) | null) {
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [data, setData] = useState<T | null>(null);
     const [tick, setTick] = useState(0);
+    // The result of the most recent request, tagged with the request it
+    // belongs to. Comparing the tag during render (rather than resetting state
+    // in the effect) means a changed `fetcher` reads as loading immediately,
+    // instead of exposing one render of `loading: false, data: null`.
+    const [settled, setSettled] = useState<Settled<T> | null>(null);
 
     const refetch = useCallback(() => setTick((t) => t + 1), []);
 
     useEffect(() => {
-        let ignore = false;
-
-        setLoading(true);
-        setError('');
-        setData(null);
-
         if (fetcher === null) {
-            setLoading(false);
             return;
         }
+
+        let ignore = false;
 
         fetcher()
             .then((result) => {
                 if (!ignore) {
-                    setData(result);
+                    setSettled({ fetcher, tick, data: result, error: '' });
                 }
             })
             .catch((err: unknown) => {
                 if (!ignore) {
-                    setError(
-                        err instanceof Error ? err.message : 'Request failed'
-                    );
-                }
-            })
-            .finally(() => {
-                if (!ignore) {
-                    setLoading(false);
+                    setSettled({
+                        fetcher,
+                        tick,
+                        data: null,
+                        error:
+                            err instanceof Error
+                                ? err.message
+                                : 'Request failed'
+                    });
                 }
             });
 
@@ -52,5 +57,15 @@ export default function useFetch<T>(fetcher: (() => Promise<T>) | null) {
         };
     }, [fetcher, tick]);
 
-    return { loading, error, data, refetch };
+    const current =
+        settled !== null &&
+        settled.fetcher === fetcher &&
+        settled.tick === tick;
+
+    return {
+        loading: fetcher !== null && !current,
+        error: current ? settled.error : '',
+        data: current ? settled.data : null,
+        refetch
+    };
 }
