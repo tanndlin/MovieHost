@@ -162,7 +162,7 @@ pub fn parse_media_library(paths: &[String]) -> MediaLibrary {
                     }
                 })
                 .collect();
-            seasons.sort_by(|a, b| ci_cmp(&a.name, &b.name));
+            seasons.sort_by(|a, b| natural_cmp(&a.name, &b.name));
             Show {
                 base_path: format!("Shows/{show_name}"),
                 name: show_name,
@@ -210,6 +210,43 @@ fn ci_cmp(a: &str, b: &str) -> Ordering {
     a.to_lowercase()
         .cmp(&b.to_lowercase())
         .then_with(|| a.cmp(b))
+}
+
+/// Case-insensitive ordering that compares runs of digits by numeric value, so
+/// `Season 2` sorts before `Season 10`. Falls back to [`ci_cmp`] on ties.
+fn natural_cmp(a: &str, b: &str) -> Ordering {
+    let (a_lower, b_lower) = (a.to_lowercase(), b.to_lowercase());
+    let mut ai = a_lower.chars().peekable();
+    let mut bi = b_lower.chars().peekable();
+    loop {
+        match (ai.peek().copied(), bi.peek().copied()) {
+            (None, None) => return ci_cmp(a, b),
+            (None, Some(_)) => return Ordering::Less,
+            (Some(_), None) => return Ordering::Greater,
+            (Some(x), Some(y)) if x.is_ascii_digit() && y.is_ascii_digit() => {
+                let take_digits = |it: &mut std::iter::Peekable<std::str::Chars>| {
+                    let mut run = String::new();
+                    while let Some(c) = it.next_if(char::is_ascii_digit) {
+                        run.push(c);
+                    }
+                    run
+                };
+                let (x_run, y_run) = (take_digits(&mut ai), take_digits(&mut bi));
+                let (x_num, y_num) = (x_run.trim_start_matches('0'), y_run.trim_start_matches('0'));
+                let ord = x_num.len().cmp(&y_num.len()).then_with(|| x_num.cmp(y_num));
+                if ord != Ordering::Equal {
+                    return ord;
+                }
+            }
+            (Some(x), Some(y)) => {
+                if x != y {
+                    return x.cmp(&y);
+                }
+                ai.next();
+                bi.next();
+            }
+        }
+    }
 }
 
 /// Pull a `Season N` / episode pair out of names like `S01E02` or `1x02`.
@@ -341,6 +378,24 @@ mod tests {
                 .map(|s| s.name.as_str())
                 .collect::<Vec<_>>(),
             vec!["Apple", "zebra"]
+        );
+    }
+
+    #[test]
+    fn seasons_sort_numerically() {
+        let lib = parse_media_library(&paths(&[
+            "Shows/Show/Season 10/e1.mp4",
+            "Shows/Show/Season 2/e1.mp4",
+            "Shows/Show/Season 1/e1.mp4",
+            "Shows/Show/Season 11/e1.mp4",
+        ]));
+        assert_eq!(
+            lib.shows[0]
+                .seasons
+                .iter()
+                .map(|s| s.name.as_str())
+                .collect::<Vec<_>>(),
+            vec!["Season 1", "Season 2", "Season 10", "Season 11"]
         );
     }
 }
