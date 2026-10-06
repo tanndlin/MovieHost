@@ -105,18 +105,19 @@ pipeline {
             }
         }
 
-        // Validates both deployable images still build on master; MovieHost ships
-        // via docker-compose rather than standalone binaries, so there's no
-        // GitHub release artifact to publish here.
-        stage('Build Docker Images') {
+        stage('Deploy') {
             when {
-                expression { env.GIT_BRANCH == 'master' || env.GIT_BRANCH == 'origin/master' }
+                allOf {
+                    expression { env.GIT_BRANCH == 'master' || env.GIT_BRANCH == 'origin/master' }
+                    expression { currentBuild.currentResult == 'SUCCESS' }
+                }
+            }
+            environment {
+                MEDIA_HOME = credentials('MEDIA_HOME')
+                TMDB_API_KEY = credentials('TMDB_API_KEY')
             }
             steps {
-                sh '''
-                docker build -t moviehost-server:$GIT_COMMIT ./server
-                docker build -t moviehost-frontend:$GIT_COMMIT ./frontend
-                '''
+                sh 'docker compose -p moviehost up -d --build --remove-orphans'
             }
         }
     }
