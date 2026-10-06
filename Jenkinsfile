@@ -117,7 +117,7 @@ pipeline {
                 TMDB_API_KEY = credentials('TMDB_API_KEY')
             }
             steps {
-                sh 'docker compose -p moviehost up -d --build --remove-orphans'
+                sh 'docker compose -f docker-compose.yml -f docker-compose.deploy.yml -p moviehost up -d --build --remove-orphans'
             }
         }
     }
