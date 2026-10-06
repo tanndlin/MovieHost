@@ -56,9 +56,43 @@ pub struct TmdbSearchResponse {
 /// Metadata for one title, as served by `/api/details`.
 #[derive(Clone, Deserialize, Serialize, ToSchema)]
 pub struct MovieDetails {
+    /// TMDB id; for a show, this keys the per-season lookups behind `/api/season`.
+    pub id: i64,
     /// TMDB-relative poster path, absent when TMDB has no artwork.
     pub poster_path: Option<String>,
     pub overview: Option<String>,
     #[serde(alias = "first_air_date")]
     pub release_date: Option<String>,
+}
+
+/// Query string for `/api/season`.
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct SeasonParams {
+    /// Show path relative to the server's media root.
+    #[param(example = "Shows/The Wire")]
+    pub path: String,
+    /// TMDB season number; specials are season 0.
+    #[param(example = 1)]
+    pub season: u32,
+}
+
+/// Episode metadata for one season, as served by `/api/season`. Also the
+/// shape TMDB's season endpoint returns, minus the fields we don't use.
+#[derive(Clone, Deserialize, Serialize, ToSchema)]
+pub struct SeasonDetails {
+    pub episodes: Vec<EpisodeDetails>,
+}
+
+/// Metadata for a single episode.
+#[derive(Clone, Deserialize, Serialize, ToSchema)]
+pub struct EpisodeDetails {
+    pub episode_number: u32,
+    pub name: Option<String>,
+    pub overview: Option<String>,
+    pub air_date: Option<String>,
+    /// TMDB-relative still image path, absent when TMDB has no artwork.
+    pub still_path: Option<String>,
+    /// Runtime in minutes.
+    pub runtime: Option<u32>,
 }

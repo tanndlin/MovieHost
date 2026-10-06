@@ -20,6 +20,7 @@ export type Profile = Schemas['Profile'];
 export type ProfileResponse = Schemas['ProfileResponse'];
 
 export type MovieDetails = Schemas['MovieDetails'];
+export type EpisodeDetails = Schemas['EpisodeDetails'];
 
 /** Coarse watch status derived from a `WatchState`, for badge rendering. */
 export type WatchStatus = 'finished' | 'in-progress';

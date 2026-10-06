@@ -93,3 +93,11 @@ export async function getDetails(path: string) {
         await client.GET('/api/details', { params: { query: { path } } })
     );
 }
+
+export async function getSeasonDetails(path: string, season: number) {
+    return unwrap(
+        await client.GET('/api/season', {
+            params: { query: { path, season } }
+        })
+    );
+}

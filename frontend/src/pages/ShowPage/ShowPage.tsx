@@ -188,6 +188,7 @@ const ShowPage = () => {
                         <SeasonDropdown
                             key={season.name}
                             {...{
+                                showPath: basePath,
                                 season,
                                 setOpenSeason,
                                 openSeason,

@@ -409,6 +409,71 @@
         }
       }
     },
+    "/api/season": {
+      "get": {
+        "tags": [
+          "media"
+        ],
+        "summary": "Episode metadata for one season of a show.",
+        "operationId": "handle_season",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "description": "Show path relative to the server's media root.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Shows/The Wire"
+          },
+          {
+            "name": "season",
+            "in": "query",
+            "description": "TMDB season number; specials are season 0.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Season metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SeasonDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or malformed query, or not a show",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No metadata for this show or season",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/thumbnail": {
       "get": {
         "tags": [
@@ -563,6 +628,54 @@
           }
         }
       },
+      "EpisodeDetails": {
+        "type": "object",
+        "description": "Metadata for a single episode.",
+        "required": [
+          "episode_number"
+        ],
+        "properties": {
+          "air_date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "episode_number": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "overview": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "runtime": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Runtime in minutes.",
+            "minimum": 0
+          },
+          "still_path": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "TMDB-relative still image path, absent when TMDB has no artwork."
+          }
+        }
+      },
       "ErrorBody": {
         "type": "object",
         "description": "JSON body returned for every error response.",
@@ -655,7 +768,15 @@
       "MovieDetails": {
         "type": "object",
         "description": "Metadata for one title, as served by `/api/details`.",
+        "required": [
+          "id"
+        ],
         "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "TMDB id; for a show, this keys the per-season lookups behind `/api/season`."
+          },
           "overview": {
             "type": [
               "string",
@@ -748,6 +869,21 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "SeasonDetails": {
+        "type": "object",
+        "description": "Episode metadata for one season, as served by `/api/season`. Also the\nshape TMDB's season endpoint returns, minus the fields we don't use.",
+        "required": [
+          "episodes"
+        ],
+        "properties": {
+          "episodes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EpisodeDetails"
+            }
           }
         }
       },

@@ -17,13 +17,14 @@ use utoipa_scalar::{Scalar, Servable};
 use crate::library::list_media_files;
 use crate::openapi::api_router;
 use crate::response::{ApiError, ApiJson, ApiPath, ApiQuery, Cached, ErrorBody, Jpeg};
-use crate::types::{MovieDetails, ThumbnailParams, TmdbSearchResponse, WatchState};
+use crate::types::{MovieDetails, SeasonDetails, SeasonParams, ThumbnailParams, WatchState};
 use crate::ws::websocket::handle_ws;
 
 mod library;
 mod openapi;
 mod profile;
 mod response;
+mod tmdb;
 mod types;
 mod ws;
 
@@ -37,7 +38,8 @@ struct AppState {
     http_client: reqwest::Client,
     db_pool: sqlx::Pool<sqlx::Postgres>,
     websockets: HashMap<u64, Vec<UnboundedSender<Message>>>,
-    movie_info_cache: HashMap<String, MovieDetails>,
+    /// One lock per TMDB cache key with a fetch in flight. See `tmdb::cached`.
+    tmdb_inflight: HashMap<String, Arc<tokio::sync::Mutex<()>>>,
 }
 
 type SharedState = Arc<Mutex<AppState>>;
@@ -72,7 +74,7 @@ async fn main() {
         http_client: reqwest::Client::new(),
         db_pool,
         websockets: HashMap::new(),
-        movie_info_cache: HashMap::new(),
+        tmdb_inflight: HashMap::new(),
     }));
 
     let (api, openapi) = api_router();
@@ -154,7 +156,7 @@ pub(crate) async fn handle_thumbnail(
 
     let movie_info = movie_details(&state, &params.path).await?;
 
-    let bytes = fetch_poster(&state, &movie_info)
+    let bytes = tmdb::poster(&state, &movie_info)
         .await
         .ok_or(ApiError::NotFound)?;
     let _ = tokio::fs::write(&thumb_path, &bytes).await;
@@ -182,59 +184,37 @@ pub(crate) async fn handle_details(
     Ok(Cached::new(DETAILS_CACHE_CONTROL, Json(movie_info)))
 }
 
-/// Cache-backed TMDB lookup shared by the thumbnail and details handlers.
-async fn movie_details(state: &SharedState, path: &str) -> Result<MovieDetails, ApiError> {
-    if let Some(cached) = state.lock().unwrap().movie_info_cache.get(path).cloned() {
-        return Ok(cached);
+/// Episode metadata for one season of a show.
+#[utoipa::path(
+    get,
+    path = "/api/season",
+    tag = "media",
+    params(SeasonParams),
+    responses(
+        (status = 200, description = "Season metadata", body = SeasonDetails),
+        (status = 400, description = "Missing or malformed query, or not a show", body = ErrorBody),
+        (status = 404, description = "No metadata for this show or season", body = ErrorBody),
+    ),
+)]
+pub(crate) async fn handle_season(
+    State(state): State<SharedState>,
+    ApiQuery(params): ApiQuery<SeasonParams>,
+) -> Result<Cached<Json<SeasonDetails>>, ApiError> {
+    if !params.path.to_lowercase().starts_with("show") {
+        return Err(ApiError::BadRequest("path must point at a show".to_owned()));
     }
 
-    let info = search_tmdb(state, path).await.ok_or(ApiError::NotFound)?;
-    state
-        .lock()
-        .unwrap()
-        .movie_info_cache
-        .insert(path.to_owned(), info.clone());
+    let show = movie_details(&state, &params.path).await?;
+    let info = tmdb::season(&state, show.id, params.season)
+        .await
+        .ok_or(ApiError::NotFound)?;
 
-    Ok(info)
+    Ok(Cached::new(DETAILS_CACHE_CONTROL, Json(info)))
 }
 
-async fn search_tmdb(state: &SharedState, path: &str) -> Option<MovieDetails> {
-    let media_type = if path.to_lowercase().starts_with("movie") {
-        "movie"
-    } else if path.to_lowercase().starts_with("show") {
-        "tv"
-    } else {
-        return None;
-    };
-
-    let filename = path.rsplit('/').next().unwrap_or(path);
-    let title = filename.split('.').next().unwrap_or(filename);
-
-    let (client, api_key) = {
-        let guard = state.lock().unwrap();
-        (guard.http_client.clone(), guard.tmdb_api_key.clone())
-    };
-
-    let url = reqwest::Url::parse_with_params(
-        format!("https://api.themoviedb.org/3/search/{media_type}").as_str(),
-        &[("api_key", api_key.as_str()), ("query", title)],
-    )
-    .ok()?;
-
-    let response = client.get(url).send().await.ok()?;
-    let resp_text = response.text().await.ok()?;
-    let tmdb_response: TmdbSearchResponse = serde_json::from_str(&resp_text).ok()?;
-    tmdb_response.results.into_iter().next()
-}
-
-async fn fetch_poster(state: &SharedState, movie_info: &MovieDetails) -> Option<Vec<u8>> {
-    let poster_path = movie_info.poster_path.as_ref()?;
-    let poster_url = format!("https://image.tmdb.org/t/p/w500{poster_path}");
-
-    let client = state.lock().unwrap().http_client.clone();
-    let poster_response = client.get(&poster_url).send().await.ok()?;
-    let poster_bytes = poster_response.bytes().await.ok()?;
-    Some(poster_bytes.to_vec())
+/// TMDB lookup shared by the thumbnail, details and season handlers.
+async fn movie_details(state: &SharedState, path: &str) -> Result<MovieDetails, ApiError> {
+    tmdb::search(state, path).await.ok_or(ApiError::NotFound)
 }
 
 /// Record how far a profile got through one piece of media.

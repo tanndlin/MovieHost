@@ -128,6 +128,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/season": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Episode metadata for one season of a show. */
+        get: operations["handle_season"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/thumbnail": {
         parameters: {
             query?: never;
@@ -172,6 +189,21 @@ export interface components {
             path: string;
             season: string;
         };
+        /** @description Metadata for a single episode. */
+        EpisodeDetails: {
+            air_date?: string | null;
+            /** Format: int32 */
+            episode_number: number;
+            name?: string | null;
+            overview?: string | null;
+            /**
+             * Format: int32
+             * @description Runtime in minutes.
+             */
+            runtime?: number | null;
+            /** @description TMDB-relative still image path, absent when TMDB has no artwork. */
+            still_path?: string | null;
+        };
         /** @description JSON body returned for every error response. */
         ErrorBody: {
             /**
@@ -200,6 +232,11 @@ export interface components {
         };
         /** @description Metadata for one title, as served by `/api/details`. */
         MovieDetails: {
+            /**
+             * Format: int64
+             * @description TMDB id; for a show, this keys the per-season lookups behind `/api/season`.
+             */
+            id: number;
             overview?: string | null;
             /** @description TMDB-relative poster path, absent when TMDB has no artwork. */
             poster_path?: string | null;
@@ -227,6 +264,13 @@ export interface components {
         Season: {
             episodes: components["schemas"]["Episode"][];
             name: string;
+        };
+        /**
+         * @description Episode metadata for one season, as served by `/api/season`. Also the
+         *     shape TMDB's season endpoint returns, minus the fields we don't use.
+         */
+        SeasonDetails: {
+            episodes: components["schemas"]["EpisodeDetails"][];
         };
         Show: {
             basePath: string;
@@ -592,6 +636,55 @@ export interface operations {
             };
             /** @description Database error */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    handle_season: {
+        parameters: {
+            query: {
+                /**
+                 * @description Show path relative to the server's media root.
+                 * @example Shows/The Wire
+                 */
+                path: string;
+                /**
+                 * @description TMDB season number; specials are season 0.
+                 * @example 1
+                 */
+                season: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Season metadata */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SeasonDetails"];
+                };
+            };
+            /** @description Missing or malformed query, or not a show */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No metadata for this show or season */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

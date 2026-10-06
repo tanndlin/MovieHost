@@ -1,8 +1,12 @@
-import { Season, WatchState } from '../../types';
-import { hasWatchProgress } from '../../utils/utils';
+import { useMemo } from 'react';
+import { getSeasonDetails } from '../../api/client';
+import useFetch from '../../common/useFetch';
+import { EpisodeDetails, Season, WatchState } from '../../types';
+import { hasWatchProgress, seasonNumber } from '../../utils/utils';
 import ShowItem from './ShowItem';
 
 type SeasonProps = {
+    showPath: string;
     season: Season;
     openSeason: string | null;
     setOpenSeason: (seasonName: string | null) => void;
@@ -12,6 +16,7 @@ type SeasonProps = {
 };
 
 const SeasonDropdown = ({
+    showPath,
     season,
     setOpenSeason,
     openSeason,
@@ -21,6 +26,26 @@ const SeasonDropdown = ({
 }: SeasonProps) => {
     const hasProgress = season.episodes.some((ep) =>
         hasWatchProgress(watchStates[ep.path])
+    );
+
+    const isOpen = openSeason === season.name;
+    const number = seasonNumber(season.name);
+    // Only fetched once the season is expanded; reopening is served from the
+    // HTTP cache.
+    const fetchDetails = useMemo(
+        () =>
+            isOpen && number !== null
+                ? () => getSeasonDetails(showPath, number)
+                : null,
+        [isOpen, number, showPath]
+    );
+    const { data: seasonDetails } = useFetch(fetchDetails);
+    const detailsByEpisode = useMemo(
+        () =>
+            new Map<number, EpisodeDetails>(
+                seasonDetails?.episodes.map((d) => [d.episode_number, d])
+            ),
+        [seasonDetails]
     );
 
     const toggle = () =>
@@ -65,7 +90,7 @@ const SeasonDropdown = ({
                         height="14"
                         viewBox="0 0 24 24"
                         fill="none"
-                        className={`transition-transform duration-200 ${openSeason === season.name ? 'rotate-180' : ''}`}
+                        className={`transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                     >
                         <path
                             d="M6 9l6 6 6-6"
@@ -78,13 +103,16 @@ const SeasonDropdown = ({
                 </span>
             </div>
 
-            {openSeason === season.name && (
+            {isOpen && (
                 <ul className="divide-y divide-white/5">
                     {season.episodes.map((ep) => (
                         <ShowItem
                             key={ep.path}
                             {...{
                                 ep,
+                                details: ep.episode
+                                    ? detailsByEpisode.get(Number(ep.episode))
+                                    : undefined,
                                 watchStates,
                                 onUnwatch: onUnwatchEpisode
                             }}

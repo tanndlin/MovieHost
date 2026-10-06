@@ -11,6 +11,23 @@ export function mediaUrl(path: string): string {
     return `${API_BASE_URL}/media/${encoded}`;
 }
 
+/** TMDB still image at a width suited to an episode-list thumbnail. */
+export function stillUrl(stillPath: string): string {
+    return `https://image.tmdb.org/t/p/w300${stillPath}`;
+}
+
+/**
+ * TMDB season number for a season folder name: the last run of digits
+ * (`Season 03` -> 3), 0 for specials, or `null` when there is none.
+ */
+export function seasonNumber(name: string): number | null {
+    if (/special/i.test(name)) {
+        return 0;
+    }
+    const digits = name.match(/\d+/g);
+    return digits ? Number(digits[digits.length - 1]) : null;
+}
+
 export function posterTransitionName(showName: string): string {
     return `show-poster-${sanitizeTransitionName(showName)}`;
 }

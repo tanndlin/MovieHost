@@ -38,6 +38,7 @@ pub fn api_router() -> (Router<SharedState>, utoipa::openapi::OpenApi) {
         .routes(routes!(crate::library::handle_library))
         .routes(routes!(crate::handle_thumbnail))
         .routes(routes!(crate::handle_details))
+        .routes(routes!(crate::handle_season))
         .routes(routes!(crate::profile::handle_post_profile))
         .routes(routes!(crate::profile::handle_get_profiles))
         .routes(routes!(
