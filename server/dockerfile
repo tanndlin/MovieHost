@@ -2,22 +2,26 @@
 FROM rust:1.97 AS builder
 WORKDIR /app
 
+# Compile dependencies against a stub main so this layer stays cached
+# until Cargo.toml or Cargo.lock change
 COPY Cargo.toml Cargo.lock ./
+RUN --mount=type=cache,target=/usr/local/cargo/registry \
+    mkdir src && echo 'fn main() {}' > src/main.rs && \
+    cargo build --release && rm -rf src
+
 COPY migrations ./migrations
 COPY src ./src
 
-# Registry and target are cache mounts, so only changed crates recompile;
-# the binary has to be copied out of the target mount
+# touch so cargo rebuilds the crate instead of reusing the stub's binary
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/app/target \
-    cargo build --release && cp target/release/server /app/server-bin
+    touch src/main.rs && cargo build --release
 
 # ---------- runtime ----------
 # distroless/cc ships glibc, libgcc and CA certs (needed for TMDB over TLS); no shell.
 FROM gcr.io/distroless/cc-debian13
 WORKDIR /app
 
-COPY --from=builder /app/server-bin /app/server
+COPY --from=builder /app/target/release/server /app/server
 
 ENV API_PORT=3000
 EXPOSE 3000
