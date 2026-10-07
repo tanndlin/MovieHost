@@ -18,7 +18,7 @@ pipeline {
         GITHUB_TOKEN = credentials('GITHUB_TOKEN')
         DOCKER_VOLS = '-v jenkins_jenkins_home:/var/jenkins_home -v cargo-registry-cache:/usr/local/cargo/registry -v npm-cache:/root/.npm'
         NODE_IMAGE = 'node:22'
-        RUST_IMAGE = 'rust:1.97'
+        RUST_IMAGE = 'moviehost-rust-ci:1.97'
     }
 
     stages {
@@ -26,6 +26,12 @@ pipeline {
             steps {
                 checkout scm
                 setStatus('pending', 'Build in progress')
+            }
+        }
+
+        stage('Prepare Rust Image') {
+            steps {
+                sh 'docker build -q -t $RUST_IMAGE - < server/ci.dockerfile'
             }
         }
 
@@ -64,7 +70,7 @@ pipeline {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     sh '''
                     docker run --rm $DOCKER_VOLS -w $WORKSPACE/server $RUST_IMAGE \
-                        sh -c "rustup component add clippy && cargo clippy --all-targets -- -D clippy::pedantic"
+                        sh -c "cargo clippy --all-targets -- -D clippy::pedantic"
                     '''
                 }
             }
@@ -86,7 +92,7 @@ pipeline {
                 catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
                     sh '''
                     docker run --rm $DOCKER_VOLS -w $WORKSPACE/server $RUST_IMAGE \
-                        sh -c "rustup component add rustfmt && cargo fmt -- --check"
+                        sh -c "cargo fmt -- --check"
                     '''
                 }
             }
