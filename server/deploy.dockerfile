@@ -1,9 +1,8 @@
 # Packages the binary built by Jenkins' "Build Backend" stage (rust:1.92, Debian trixie)
 # instead of recompiling. For local builds use `dockerfile`.
-FROM debian:trixie-slim
+# distroless/cc ships glibc, libgcc and CA certs (needed for TMDB over TLS); no shell.
+FROM gcr.io/distroless/cc-debian13
 WORKDIR /app
-
-RUN apt-get update && apt-get install -y ca-certificates && update-ca-certificates
 
 COPY target/release/server /app/server
 
