@@ -111,7 +111,7 @@ pipeline {
             steps {
                 sh '''
                 docker run --rm $DOCKER_VOLS -w $WORKSPACE/server $RUST_IMAGE \
-                    sh -c "cargo test"
+                    sh -c "cargo test --release"
                 '''
             }
         }
