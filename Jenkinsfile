@@ -5,7 +5,7 @@ pipeline {
         GITHUB_TOKEN = credentials('GITHUB_TOKEN')
         DOCKER_VOLS = '-v jenkins_jenkins_home:/var/jenkins_home -v cargo-registry-cache:/usr/local/cargo/registry'
         NODE_IMAGE = 'node:20'
-        RUST_IMAGE = 'rust:1.92'
+        RUST_IMAGE = 'rust:1.97'
     }
 
     stages {
