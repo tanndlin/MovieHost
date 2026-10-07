@@ -17,7 +17,7 @@ pipeline {
     environment {
         GITHUB_TOKEN = credentials('GITHUB_TOKEN')
         DOCKER_VOLS = '-v jenkins_jenkins_home:/var/jenkins_home -v cargo-registry-cache:/usr/local/cargo/registry -v npm-cache:/root/.npm'
-        NODE_IMAGE = 'node:20'
+        NODE_IMAGE = 'node:22'
         RUST_IMAGE = 'rust:1.97'
     }
 
