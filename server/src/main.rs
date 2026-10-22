@@ -12,6 +12,8 @@ use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::UnboundedSender;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::services::ServeDir;
+use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+use tracing::{Instrument, Level};
 use utoipa_scalar::{Scalar, Servable};
 
 use crate::library::list_media_files;
@@ -21,6 +23,7 @@ use crate::types::{MovieDetails, SeasonDetails, SeasonParams, ThumbnailParams, W
 use crate::ws::websocket::handle_ws;
 
 mod library;
+mod logging;
 mod openapi;
 mod profile;
 mod response;
@@ -46,7 +49,8 @@ type SharedState = Arc<Mutex<AppState>>;
 
 #[tokio::main]
 async fn main() {
-    println!("Starting server...");
+    logging::init();
+    tracing::info!("Starting server...");
 
     let database_url =
         std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable not set");
@@ -55,7 +59,7 @@ async fn main() {
     let tmdb_api_key =
         std::env::var("TMDB_API_KEY").expect("TMDB_API_KEY environment variable not set");
 
-    println!("Connecting to database...");
+    tracing::info!("Connecting to database...");
     let db_pool = PgPoolOptions::new()
         .connect(&database_url)
         .await
@@ -66,7 +70,7 @@ async fn main() {
         .await
         .expect("Failed to run database migrations");
 
-    println!("Database connected and migrations applied.");
+    tracing::info!("Database connected and migrations applied.");
 
     let app_state: SharedState = Arc::new(Mutex::new(AppState {
         serve_dir: serve_dir.clone(),
@@ -98,12 +102,18 @@ async fn main() {
         app
     };
 
+    let app = app.layer(
+        TraceLayer::new_for_http()
+            .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
+            .on_failure(()),
+    );
+
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{api_port}"))
         .await
         .unwrap();
     let ip = listener.local_addr().unwrap();
-    println!("Server running on http://{ip}");
-    println!("API reference at http://{ip}/scalar");
+    tracing::info!("Server running on http://{ip}");
+    tracing::info!("API reference at http://{ip}/scalar");
     axum::serve(listener, app).await.unwrap();
 }
 
@@ -254,7 +264,9 @@ pub(crate) async fn handle_put_watch_state(
 }
 
 async fn ws_handler(ws: WebSocketUpgrade, State(state): State<SharedState>) -> Response {
-    ws.on_upgrade(move |socket| handle_socket(socket, state))
+    // `user_id` is filled in by the handshake.
+    let span = tracing::info_span!("ws", user_id = tracing::field::Empty);
+    ws.on_upgrade(move |socket| handle_socket(socket, state).instrument(span))
 }
 
 async fn handle_socket(socket: WebSocket, state: SharedState) {

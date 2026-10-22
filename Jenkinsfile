@@ -149,6 +149,8 @@ pipeline {
             environment {
                 MEDIA_HOME = credentials('MEDIA_HOME')
                 TMDB_API_KEY = credentials('TMDB_API_KEY')
+                // log-ingestor runs as its own compose project on this host and publishes 1337
+                TANLOGS_ADDR = 'host.docker.internal:1337'
             }
             steps {
                 sh 'docker compose -f docker-compose.yml -f docker-compose.deploy.yml -p moviehost up -d --build --remove-orphans'

@@ -39,7 +39,7 @@ impl IntoResponse for ApiError {
             Self::BadRequest(detail) => (StatusCode::BAD_REQUEST, detail.as_str()),
             Self::NotFound => (StatusCode::NOT_FOUND, "Not found"),
             Self::Internal(detail) => {
-                eprintln!("500 Internal Server Error: {detail}");
+                tracing::error!("500 Internal Server Error: {detail}");
                 (StatusCode::INTERNAL_SERVER_ERROR, "Internal server error")
             }
         };

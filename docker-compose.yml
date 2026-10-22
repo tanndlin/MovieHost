@@ -35,6 +35,9 @@ services:
         ports:
             - '3000:3000'
         pid: 'host'
+        # Lets the container reach ports published by other compose projects on this host.
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
         networks:
             - movie-host-network
         volumes:
@@ -44,6 +47,7 @@ services:
             - SERVE_DIR=/media
             - DATABASE_URL=postgresql://user:password@db:5432/movie_host
             - TMDB_API_KEY=${TMDB_API_KEY}
+            - TANLOGS_ADDR=${TANLOGS_ADDR:-}
 
     frontend:
         build: ./frontend

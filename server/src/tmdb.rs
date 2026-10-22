@@ -108,7 +108,7 @@ async fn get_json<T: DeserializeOwned>(
     let response = match client.get(url).send().await {
         Ok(response) => response,
         Err(err) => {
-            eprintln!("TMDB request failed: {err}");
+            tracing::warn!("TMDB request failed: {err}");
             return Fetch::Failed;
         }
     };
@@ -117,7 +117,7 @@ async fn get_json<T: DeserializeOwned>(
         return Fetch::Missing;
     }
     if !response.status().is_success() {
-        eprintln!("TMDB request failed: {}", response.status());
+        tracing::warn!("TMDB request failed: {}", response.status());
         return Fetch::Failed;
     }
 
@@ -128,11 +128,11 @@ async fn get_json<T: DeserializeOwned>(
     {
         Ok(Ok(value)) => Fetch::Found(value),
         Ok(Err(err)) => {
-            eprintln!("Unexpected TMDB response: {err}");
+            tracing::warn!("Unexpected TMDB response: {err}");
             Fetch::Failed
         }
         Err(err) => {
-            eprintln!("TMDB request failed: {err}");
+            tracing::warn!("TMDB request failed: {err}");
             Fetch::Failed
         }
     }
@@ -191,7 +191,7 @@ async fn read_cache<T: DeserializeOwned>(db_pool: &sqlx::PgPool, key: &str) -> O
     .bind(FOUND_TTL)
     .fetch_optional(db_pool)
     .await
-    .inspect_err(|err| eprintln!("TMDB cache read failed: {err}"))
+    .inspect_err(|err| tracing::warn!("TMDB cache read failed: {err}"))
     .ok()?;
 
     match row? {
@@ -211,7 +211,7 @@ async fn write_cache(db_pool: &sqlx::PgPool, key: &str, body: Option<String>) {
     .execute(db_pool)
     .await;
     if let Err(err) = result {
-        eprintln!("TMDB cache write failed: {err}");
+        tracing::warn!("TMDB cache write failed: {err}");
     }
 }
 

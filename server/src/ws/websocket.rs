@@ -31,6 +31,7 @@ pub async fn handle_ws(socket: WebSocket, state: Arc<Mutex<AppState>>) {
                 Ok(client_msg) => match client_msg {
                     WsClientMessage::Handshake(HandshakeMessage { user_id }) => {
                         authed_user_id = Some(user_id);
+                        tracing::Span::current().record("user_id", user_id);
                         state
                             .lock()
                             .unwrap()
@@ -38,13 +39,13 @@ pub async fn handle_ws(socket: WebSocket, state: Arc<Mutex<AppState>>) {
                             .entry(user_id)
                             .or_default()
                             .push(tx.clone());
-                        println!("User {user_id} connected");
+                        tracing::info!("User {user_id} connected");
                     }
                     WsClientMessage::Control(control_message) => {
                         handle_control_message(control_message, &state);
                     }
                 },
-                Err(e) => eprintln!("Failed to parse: {e}"),
+                Err(e) => tracing::warn!("Failed to parse: {e}"),
             },
             _ => {}
         }
@@ -54,7 +55,7 @@ pub async fn handle_ws(socket: WebSocket, state: Arc<Mutex<AppState>>) {
         if let Some(senders) = state.lock().unwrap().websockets.get_mut(&user_id) {
             senders.retain(|sender| !sender.is_closed());
         }
-        println!("User {user_id} disconnected");
+        tracing::info!("User {user_id} disconnected");
     }
 }
 
