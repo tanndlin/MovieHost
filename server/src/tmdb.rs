@@ -39,24 +39,60 @@ pub async fn search(state: &SharedState, path: &str) -> Option<MovieDetails> {
     };
 
     let filename = path.rsplit('/').next().unwrap_or(path);
-    let title = filename.split('.').next().unwrap_or(filename);
+    let (title, year) = split_year(filename.split('.').next().unwrap_or(filename));
+    let year_param = if media_type == "movie" {
+        "year"
+    } else {
+        "first_air_date_year"
+    };
 
     // Keyed by the query rather than the path, so every path that resolves to
     // the same title shares one entry.
-    let key = format!("search:{media_type}:{}", title.to_lowercase());
+    let key = match year {
+        Some(year) => format!("search:{media_type}:{}:{year}", title.to_lowercase()),
+        None => format!("search:{media_type}:{}", title.to_lowercase()),
+    };
     cached(state, &key, || async {
         let url = format!("https://api.themoviedb.org/3/search/{media_type}");
-        match get_json::<TmdbSearchResponse>(state, &url, &[("query", title)]).await {
-            Fetch::Found(resp) => resp
-                .results
-                .into_iter()
-                .next()
-                .map_or(Fetch::Missing, Fetch::Found),
-            Fetch::Missing => Fetch::Missing,
-            Fetch::Failed => Fetch::Failed,
+        let mut params = vec![("query", title)];
+        params.extend(year.map(|year| (year_param, year)));
+        let mut result = first_result(get_json(state, &url, &params).await);
+        // A year that disagrees with TMDB's release date shouldn't cost the
+        // poster, so fall back to the bare title.
+        if year.is_some() && matches!(result, Fetch::Missing) {
+            result = first_result(get_json(state, &url, &[("query", title)]).await);
         }
+        result
     })
     .await
+}
+
+fn first_result(fetch: Fetch<TmdbSearchResponse>) -> Fetch<MovieDetails> {
+    match fetch {
+        Fetch::Found(resp) => resp
+            .results
+            .into_iter()
+            .next()
+            .map_or(Fetch::Missing, Fetch::Found),
+        Fetch::Missing => Fetch::Missing,
+        Fetch::Failed => Fetch::Failed,
+    }
+}
+
+/// Split a trailing ` (YYYY)` off a name, as Radarr and Sonarr write them:
+/// `Dune (2021)` becomes `("Dune", Some("2021"))`. TMDB's search finds
+/// nothing when the year is left in the query.
+fn split_year(name: &str) -> (&str, Option<&str>) {
+    let name = name.trim();
+    if let Some(inner) = name.strip_suffix(')')
+        && let Some((title, year)) = inner.rsplit_once(" (")
+        && year.len() == 4
+        && year.bytes().all(|b| b.is_ascii_digit())
+        && !title.is_empty()
+    {
+        return (title.trim_end(), Some(year));
+    }
+    (name, None)
 }
 
 /// Episode metadata for one season of a TMDB show.
@@ -232,5 +268,35 @@ fn release_key_lock(state: &SharedState, key: &str, lock: &Arc<tokio::sync::Mute
     // One reference in the map, one held by the caller.
     if Arc::strong_count(lock) == 2 {
         guard.tmdb_inflight.remove(key);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::split_year;
+
+    #[test]
+    fn splits_trailing_year() {
+        assert_eq!(split_year("Dune (2021)"), ("Dune", Some("2021")));
+        assert_eq!(
+            split_year("How to Rob a Bank (2024)"),
+            ("How to Rob a Bank", Some("2024"))
+        );
+        assert_eq!(
+            split_year("The Walking Dead (2010)"),
+            ("The Walking Dead", Some("2010"))
+        );
+    }
+
+    #[test]
+    fn leaves_other_names_alone() {
+        assert_eq!(split_year("Dune"), ("Dune", None));
+        assert_eq!(split_year("Blade Runner 2049"), ("Blade Runner 2049", None));
+        assert_eq!(split_year("Ted 2012"), ("Ted 2012", None));
+        assert_eq!(
+            split_year("Movie (Director's Cut)"),
+            ("Movie (Director's Cut)", None)
+        );
+        assert_eq!(split_year("(2021)"), ("(2021)", None));
     }
 }
