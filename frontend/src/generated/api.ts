@@ -145,6 +145,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/stream/index.m3u8": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** HLS playlist that remuxes a file the browser can't play directly. */
+        get: operations["handle_playlist"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/stream/segment.ts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One MPEG-TS segment of a remuxed stream. */
+        get: operations["handle_segment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/thumbnail": {
         parameters: {
             query?: never;
@@ -685,6 +719,105 @@ export interface operations {
             };
             /** @description No metadata for this show or season */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    handle_playlist: {
+        parameters: {
+            query: {
+                /**
+                 * @description Media path relative to the server's media root.
+                 * @example Movies/Arrival.mkv
+                 */
+                path: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description HLS media playlist */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/vnd.apple.mpegurl": string;
+                };
+            };
+            /** @description Missing or malformed path */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No such file */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    handle_segment: {
+        parameters: {
+            query: {
+                /**
+                 * @description Media path relative to the server's media root.
+                 * @example Movies/Arrival (2016)/Arrival (2016).mkv
+                 */
+                path: string;
+                /** @description Zero-based segment index from the playlist. */
+                index: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description MPEG-TS segment */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "video/mp2t": number[];
+                };
+            };
+            /** @description Missing or malformed query */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No such file or segment */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description ffmpeg failed or timed out */
+            500: {
                 headers: {
                     [name: string]: unknown;
                 };

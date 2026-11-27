@@ -1,7 +1,14 @@
-import { forwardRef, useContext, useEffect, useState } from 'react';
+import {
+    forwardRef,
+    useContext,
+    useEffect,
+    useImperativeHandle,
+    useRef,
+    useState
+} from 'react';
 import { WebsocketContext } from '../contexts/WebsocketContext';
 import { API_BASE_URL } from '../utils/env';
-import { mediaUrl } from '../utils/utils';
+import { mediaUrl, needsStream, streamUrl } from '../utils/utils';
 import { WsControlMessage } from '../wsTypes';
 import DownloadLink from './DownloadLink';
 
@@ -16,7 +23,68 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
     ({ path, title, startTime, onTimeUpdate }, ref) => {
         const [error, setError] = useState(false);
 
-        const src = mediaUrl(path);
+        const videoRef = useRef<HTMLVideoElement>(null);
+        useImperativeHandle(ref, () => videoRef.current as HTMLVideoElement);
+
+        // Read once per source: a later watch-state update shouldn't reload it.
+        const startTimeRef = useRef(startTime);
+        startTimeRef.current = startTime;
+
+        useEffect(() => {
+            const video = videoRef.current;
+            if (!video) {
+                return;
+            }
+
+            const detach = () => {
+                video.removeAttribute('src');
+                video.load();
+            };
+
+            // Native playback: direct files everywhere, and HLS where the
+            // browser handles it itself (Safari, including every iOS browser).
+            if (!needsStream(path)) {
+                video.src = mediaUrl(path);
+                return detach;
+            }
+            const url = streamUrl(path);
+            if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = url;
+                return detach;
+            }
+
+            // Everything else plays HLS through Media Source Extensions.
+            let cancelled = false;
+            let hls: import('hls.js').default | undefined;
+            import('hls.js')
+                .then(({ default: Hls }) => {
+                    if (cancelled) {
+                        return;
+                    }
+                    if (!Hls.isSupported()) {
+                        setError(true);
+                        return;
+                    }
+                    hls = new Hls({
+                        // Start where playback resumes, so the server doesn't
+                        // remux from 0 only to restart at the seek.
+                        startPosition: startTimeRef.current ?? -1
+                    });
+                    hls.on(Hls.Events.ERROR, (_event, data) => {
+                        if (data.fatal) {
+                            setError(true);
+                        }
+                    });
+                    hls.loadSource(url);
+                    hls.attachMedia(video);
+                })
+                .catch(() => setError(true));
+
+            return () => {
+                cancelled = true;
+                hls?.destroy();
+            };
+        }, [path]);
         // Point the tab title and favicon at the video while it's playing, then
         // restore whatever they were once the player unmounts.
         useEffect(() => {
@@ -44,25 +112,26 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
         useEffect(() => {
             addCallback('Control', handleControlMessage);
             function handleControlMessage(msg: WsControlMessage) {
-                if (!ref || !('current' in ref) || !ref.current) {
+                const video = videoRef.current;
+                if (!video) {
                     return;
                 }
 
                 switch (msg.action.type) {
                     case 'Play':
-                        ref.current.play();
+                        video.play();
                         break;
                     case 'Pause':
-                        ref.current.pause();
+                        video.pause();
                         break;
                     case 'Seek':
-                        ref.current.currentTime += msg.action.seek;
+                        video.currentTime += msg.action.seek;
                         break;
                 }
             }
 
             return () => removeCallback('Control', handleControlMessage);
-        }, [addCallback, removeCallback, ref]);
+        }, [addCallback, removeCallback]);
 
         return (
             <div className="flex flex-col w-full gap-3">
@@ -85,8 +154,7 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
                     </div>
                 ) : (
                     <video
-                        ref={ref}
-                        src={src}
+                        ref={videoRef}
                         controls
                         autoPlay
                         className="w-full bg-black border rounded-xl border-white/10"

@@ -5,6 +5,7 @@
     "dependencies": {
         "@heroicons/react": "^2.2.0",
         "@vitejs/plugin-react-swc": "^3.9.0",
+        "hls.js": "1.5.20",
         "openapi-fetch": "^0.17.0",
         "react": "^19.3.1",
         "react-dom": "^19.3.1",

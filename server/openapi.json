@@ -474,6 +474,137 @@
         }
       }
     },
+    "/api/stream/index.m3u8": {
+      "get": {
+        "tags": [
+          "stream"
+        ],
+        "summary": "HLS playlist that remuxes a file the browser can't play directly.",
+        "operationId": "handle_playlist",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "description": "Media path relative to the server's media root.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Movies/Arrival.mkv"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "HLS media playlist",
+            "content": {
+              "application/vnd.apple.mpegurl": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or malformed path",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such file",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/stream/segment.ts": {
+      "get": {
+        "tags": [
+          "stream"
+        ],
+        "summary": "One MPEG-TS segment of a remuxed stream.",
+        "operationId": "handle_segment",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "description": "Media path relative to the server's media root.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Movies/Arrival (2016)/Arrival (2016).mkv"
+          },
+          {
+            "name": "index",
+            "in": "query",
+            "description": "Zero-based segment index from the playlist.",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "MPEG-TS segment",
+            "content": {
+              "video/mp2t": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer",
+                    "format": "int32",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing or malformed query",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No such file or segment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "ffmpeg failed or timed out",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorBody"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/thumbnail": {
       "get": {
         "tags": [
@@ -1016,6 +1147,10 @@
     {
       "name": "profiles",
       "description": "Viewers and their playback progress"
+    },
+    {
+      "name": "stream",
+      "description": "HLS remuxing for files browsers can't play directly"
     }
   ]
 }

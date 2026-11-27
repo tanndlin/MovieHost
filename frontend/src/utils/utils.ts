@@ -11,6 +11,25 @@ export function mediaUrl(path: string): string {
     return `${API_BASE_URL}/media/${encoded}`;
 }
 
+/**
+ * Extensions every target browser plays from a plain `<video src>`. Anything
+ * else (notably `.mkv`, which iOS Safari refuses) goes through the server's
+ * HLS remux instead.
+ */
+const DIRECT_PLAY_EXTENSIONS = ['mp4', 'm4v', 'mov', 'webm'];
+
+export function needsStream(path: string): boolean {
+    const name = path.split('/').pop() ?? '';
+    const dot = name.lastIndexOf('.');
+    const ext = dot === -1 ? '' : name.slice(dot + 1).toLowerCase();
+    return !DIRECT_PLAY_EXTENSIONS.includes(ext);
+}
+
+/** HLS playlist that remuxes `path` on the fly. */
+export function streamUrl(path: string): string {
+    return `${API_BASE_URL}/stream/index.m3u8?path=${encodeURIComponent(path)}`;
+}
+
 /** TMDB still image at a width suited to an episode-list thumbnail. */
 export function stillUrl(stillPath: string): string {
     return `https://image.tmdb.org/t/p/w300${stillPath}`;

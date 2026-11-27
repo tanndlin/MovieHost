@@ -28,6 +28,7 @@ use crate::SharedState;
         (name = "library", description = "Browsing what is on disk"),
         (name = "media", description = "Artwork and title metadata"),
         (name = "profiles", description = "Viewers and their playback progress"),
+        (name = "stream", description = "HLS remuxing for files browsers can't play directly"),
     ),
 )]
 pub struct ApiDoc;
@@ -47,6 +48,8 @@ pub fn api_router() -> (Router<SharedState>, utoipa::openapi::OpenApi) {
             crate::profile::handle_delete_profile
         ))
         .routes(routes!(crate::handle_put_watch_state))
+        .routes(routes!(crate::stream::handle_playlist))
+        .routes(routes!(crate::stream::handle_segment))
         .split_for_parts()
 }
 

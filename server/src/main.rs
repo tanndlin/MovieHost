@@ -27,6 +27,7 @@ mod logging;
 mod openapi;
 mod profile;
 mod response;
+mod stream;
 mod tmdb;
 mod types;
 mod ws;
@@ -45,6 +46,8 @@ struct AppState {
     websockets: HashMap<u64, Vec<UnboundedSender<Message>>>,
     /// One lock per TMDB cache key with a fetch in flight. See `tmdb::cached`.
     tmdb_inflight: HashMap<String, Arc<tokio::sync::Mutex<()>>>,
+    /// On-the-fly HLS remuxing for files browsers can't play directly.
+    streamer: Arc<stream::Streamer>,
 }
 
 type SharedState = Arc<Mutex<AppState>>;
@@ -84,6 +87,10 @@ async fn main() {
 
     tracing::info!("Database connected and migrations applied.");
 
+    let hls_cache_dir = std::env::var("HLS_CACHE_DIR")
+        .map_or_else(|_| std::env::temp_dir().join("moviehost-hls"), Into::into);
+    let streamer = stream::Streamer::new(hls_cache_dir);
+
     let app_state: SharedState = Arc::new(Mutex::new(AppState {
         serve_dir: serve_dir.clone(),
         ignore_dirs,
@@ -92,6 +99,7 @@ async fn main() {
         db_pool,
         websockets: HashMap::new(),
         tmdb_inflight: HashMap::new(),
+        streamer,
     }));
 
     let (api, openapi) = api_router();
@@ -145,7 +153,7 @@ pub(crate) async fn handle_ls(State(state): State<SharedState>) -> Json<Vec<Stri
     Json(list_media_files(&serve_dir, &ignore_dirs))
 }
 
-fn path_hash(path: &str) -> u64 {
+pub(crate) fn path_hash(path: &str) -> u64 {
     let mut h = DefaultHasher::new();
     path.hash(&mut h);
     h.finish()

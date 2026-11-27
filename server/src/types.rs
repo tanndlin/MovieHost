@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::prelude::FromRow;
 use utoipa::{IntoParams, ToSchema};
 
-/// Query string shared by `/api/thumbnail` and `/api/details`.
+/// Query string shared by `/api/thumbnail`, `/api/details` and `/api/stream/index.m3u8`.
 // `parameter_in` is stated rather than inferred: utoipa only infers it from a
 // bare `axum::extract::Query<T>` in the handler signature, and these handlers
 // use the `ApiQuery` wrapper.
