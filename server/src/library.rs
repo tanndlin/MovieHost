@@ -58,9 +58,17 @@ pub struct MediaLibrary {
 
 /// Walk `serve_dir` and return every file path, relative to the root, using
 /// forward slashes. Sorted so the output is deterministic across requests.
-pub fn list_media_files(serve_dir: &str) -> Vec<String> {
-    let mut entries: Vec<String> = walkdir::WalkDir::new(serve_dir)
+///
+/// Directories in `ignored` (relative to `serve_dir`) are pruned whole, so
+/// their contents are never read.
+pub fn list_media_files(serve_dir: &str, ignored: &[String]) -> Vec<String> {
+    let root = std::path::Path::new(serve_dir);
+    let mut entries: Vec<String> = walkdir::WalkDir::new(root)
         .into_iter()
+        .filter_entry(|entry| {
+            let rel = entry.path().strip_prefix(root).unwrap_or(entry.path());
+            !ignored.iter().any(|dir| rel.starts_with(dir))
+        })
         .filter_map(Result::ok)
         .filter(|entry| entry.file_type().is_file())
         .filter_map(|entry| {
@@ -85,8 +93,14 @@ pub fn list_media_files(serve_dir: &str) -> Vec<String> {
     responses((status = 200, description = "Parsed media library", body = MediaLibrary)),
 )]
 pub async fn handle_library(State(state): State<SharedState>) -> Json<MediaLibrary> {
-    let serve_dir = state.lock().unwrap().serve_dir.clone();
-    Json(parse_media_library(&list_media_files(&serve_dir)))
+    let (serve_dir, ignore_dirs) = {
+        let state = state.lock().unwrap();
+        (state.serve_dir.clone(), state.ignore_dirs.clone())
+    };
+    Json(parse_media_library(&list_media_files(
+        &serve_dir,
+        &ignore_dirs,
+    )))
 }
 
 /// Group a flat list of relative file paths into shows / movies / other.
@@ -318,6 +332,29 @@ mod tests {
 
     fn paths(list: &[&str]) -> Vec<String> {
         list.iter().copied().map(String::from).collect()
+    }
+
+    #[test]
+    fn list_media_files_skips_ignored_dirs() {
+        let root = std::env::temp_dir().join(format!("moviehost-ls-{}", std::process::id()));
+        for file in [
+            "Movies/Heat.mp4",
+            "downloads/partial.mkv",
+            "downloads-old/kept.mkv",
+            "Shows/X/extras/skip.mkv",
+        ] {
+            let path = root.join(file);
+            std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+            std::fs::write(path, b"").unwrap();
+        }
+
+        let found = list_media_files(
+            root.to_str().unwrap(),
+            &paths(&["downloads", "Shows/X/extras"]),
+        );
+        std::fs::remove_dir_all(&root).unwrap();
+
+        assert_eq!(found, paths(&["Movies/Heat.mp4", "downloads-old/kept.mkv"]));
     }
 
     #[test]

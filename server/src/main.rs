@@ -35,6 +35,8 @@ mod ws;
 /// environment variable fails on boot rather than inside a handler.
 struct AppState {
     serve_dir: String,
+    /// Directories under `serve_dir` hidden from the library listing.
+    ignore_dirs: Vec<String>,
     tmdb_api_key: String,
     /// Reused across requests: a fresh `Client` per call would discard the
     /// connection pool every time.
@@ -55,6 +57,16 @@ async fn main() {
     let database_url =
         std::env::var("DATABASE_URL").expect("DATABASE_URL environment variable not set");
     let serve_dir = std::env::var("SERVE_DIR").expect("SERVE_DIR environment variable not set");
+    // Optional, comma-separated, relative to SERVE_DIR (e.g. "downloads,incomplete").
+    let ignore_dirs: Vec<String> = std::env::var("IGNORE_DIRS")
+        .unwrap_or_default()
+        .split(',')
+        .map(|dir| dir.trim().trim_matches('/').to_string())
+        .filter(|dir| !dir.is_empty())
+        .collect();
+    if !ignore_dirs.is_empty() {
+        tracing::info!("Ignoring directories: {ignore_dirs:?}");
+    }
     let api_port = std::env::var("API_PORT").expect("API_PORT environment variable not set");
     let tmdb_api_key =
         std::env::var("TMDB_API_KEY").expect("TMDB_API_KEY environment variable not set");
@@ -74,6 +86,7 @@ async fn main() {
 
     let app_state: SharedState = Arc::new(Mutex::new(AppState {
         serve_dir: serve_dir.clone(),
+        ignore_dirs,
         tmdb_api_key,
         http_client: reqwest::Client::new(),
         db_pool,
@@ -125,8 +138,11 @@ async fn main() {
     responses((status = 200, description = "Relative media paths", body = Vec<String>)),
 )]
 pub(crate) async fn handle_ls(State(state): State<SharedState>) -> Json<Vec<String>> {
-    let serve_dir = state.lock().unwrap().serve_dir.clone();
-    Json(list_media_files(&serve_dir))
+    let (serve_dir, ignore_dirs) = {
+        let state = state.lock().unwrap();
+        (state.serve_dir.clone(), state.ignore_dirs.clone())
+    };
+    Json(list_media_files(&serve_dir, &ignore_dirs))
 }
 
 fn path_hash(path: &str) -> u64 {

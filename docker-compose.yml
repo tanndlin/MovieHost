@@ -45,6 +45,8 @@ services:
         environment:
             - API_PORT=3000
             - SERVE_DIR=/media
+            # Comma-separated dirs under SERVE_DIR to hide from the library
+            - IGNORE_DIRS=${IGNORE_DIRS:-}
             - DATABASE_URL=postgresql://user:password@db:5432/movie_host
             - TMDB_API_KEY=${TMDB_API_KEY}
             - TANLOGS_ADDR=${TANLOGS_ADDR:-}

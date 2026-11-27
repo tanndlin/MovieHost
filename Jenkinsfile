@@ -149,6 +149,8 @@ pipeline {
             environment {
                 MEDIA_HOME = credentials('MEDIA_HOME')
                 TMDB_API_KEY = credentials('TMDB_API_KEY')
+                // Comma-separated, relative to MEDIA_HOME
+                IGNORE_DIRS = 'downloads'
                 // log-ingestor runs as its own compose project on this host and publishes 1337
                 TANLOGS_ADDR = 'host.docker.internal:1337'
             }
