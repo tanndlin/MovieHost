@@ -6,8 +6,8 @@
         "@heroicons/react": "^2.2.0",
         "@vitejs/plugin-react-swc": "^3.9.0",
         "openapi-fetch": "^0.17.0",
-        "react": "0.0.0-experimental-bfb7a768-20260811",
-        "react-dom": "0.0.0-experimental-bfb7a768-20260811",
+        "react": "^19.3.1",
+        "react-dom": "^19.3.1",
         "react-router-dom": "^6.26.1",
         "vite-plugin-svgr": "^4.3.0"
     },
