@@ -1,4 +1,3 @@
-import { ViewTransition } from 'react';
 import { useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import useFetch from '../../common/useFetch';
@@ -7,13 +6,7 @@ import { StorageContext } from '../../contexts/StorageContext';
 import { getDetails } from '../../api/client';
 import { Season, Show } from '../../types';
 import { API_BASE_URL } from '../../utils/env';
-import {
-    hasWatchProgress,
-    NextUp,
-    nextEpisode,
-    posterTransitionName,
-    titleTransitionName
-} from '../../utils/utils';
+import { hasWatchProgress, NextUp, nextEpisode } from '../../utils/utils';
 import SeasonDropdown from './SeasonDropdown';
 
 const ShowPage = () => {
@@ -112,11 +105,9 @@ const ShowPage = () => {
                         Back to Library
                     </Link>
                     <div className="flex items-center gap-3">
-                        <ViewTransition name={titleTransitionName(showName)}>
-                            <h1 className="text-3xl font-bold text-white tracking-tight">
-                                {show?.name ?? showName}
-                            </h1>
-                        </ViewTransition>
+                        <h1 className="text-3xl font-bold text-white tracking-tight">
+                            {show?.name ?? showName}
+                        </h1>
                         {showHasProgress && (
                             <button
                                 onClick={handleUnwatchShow}
@@ -164,14 +155,12 @@ const ShowPage = () => {
                         </button>
                     )}
                 </div>
-                <ViewTransition name={posterTransitionName(showName)}>
-                    <img
-                        id="poster"
-                        src={poster}
-                        alt="Poster"
-                        className="mx-auto shrink-0 sm:mx-0"
-                    />
-                </ViewTransition>
+                <img
+                    id="poster"
+                    src={poster}
+                    alt="Poster"
+                    className="mx-auto shrink-0 sm:mx-0"
+                />
             </div>
 
             {loading ? (

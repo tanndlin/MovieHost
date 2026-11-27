@@ -1,7 +1,6 @@
-import { ViewTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Episode, EpisodeDetails, WatchState } from '../../types';
-import { stillUrl, titleTransitionName } from '../../utils/utils';
+import { stillUrl } from '../../utils/utils';
 
 type ShowItemProps = {
     ep: Episode;
@@ -47,11 +46,9 @@ const ShowItem = ({ ep, details, watchStates, onUnwatch }: ShowItemProps) => {
                     />
                 )}
                 <div className="flex-1 min-w-0">
-                    <ViewTransition name={titleTransitionName(ep.path)}>
-                        <span className="block text-sm truncate transition-colors text-white/70 group-hover:text-white">
-                            {details?.name || ep.name}
-                        </span>
-                    </ViewTransition>
+                    <span className="block text-sm truncate transition-colors text-white/70 group-hover:text-white">
+                        {details?.name || ep.name}
+                    </span>
                     {details && (
                         <>
                             <span className="block mt-0.5 text-xs text-white/30">

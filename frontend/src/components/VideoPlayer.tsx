@@ -1,13 +1,7 @@
-import {
-    ViewTransition,
-    forwardRef,
-    useContext,
-    useEffect,
-    useState
-} from 'react';
+import { forwardRef, useContext, useEffect, useState } from 'react';
 import { WebsocketContext } from '../contexts/WebsocketContext';
 import { API_BASE_URL } from '../utils/env';
-import { mediaUrl, titleTransitionName } from '../utils/utils';
+import { mediaUrl } from '../utils/utils';
 import { WsControlMessage } from '../wsTypes';
 import DownloadLink from './DownloadLink';
 
@@ -74,11 +68,9 @@ const VideoPlayer = forwardRef<HTMLVideoElement, Props>(
             <div className="flex flex-col w-full gap-3">
                 <div className="flex justify-between">
                     {title && (
-                        <ViewTransition name={titleTransitionName(path)}>
-                            <h2 className="text-lg font-medium text-white">
-                                {title}
-                            </h2>
-                        </ViewTransition>
+                        <h2 className="text-lg font-medium text-white">
+                            {title}
+                        </h2>
                     )}
                     <DownloadLink path={path} title={title} />
                 </div>

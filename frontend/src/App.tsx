@@ -1,4 +1,3 @@
-import { ViewTransition } from 'react';
 import { BrowserRouter, Route, Routes } from 'react-router-dom';
 import Header from './components/Header';
 import { LibraryProvider } from './contexts/LibraryContext';
@@ -18,27 +17,25 @@ function App() {
                     <BrowserRouter future={{ v7_startTransition: true }}>
                         <div className="flex flex-col min-h-screen">
                             <Header />
-                            <ViewTransition>
-                                <Routes>
-                                    <Route path="/" element={<HomePage />} />
-                                    <Route
-                                        path="/show/:name"
-                                        element={<ShowPage />}
-                                    />
-                                    <Route
-                                        path="/player"
-                                        element={<PlayerPage />}
-                                    />
-                                    <Route
-                                        path="/settings"
-                                        element={<SettingsPage />}
-                                    />
-                                    <Route
-                                        path="/remote"
-                                        element={<RemotePage />}
-                                    />
-                                </Routes>
-                            </ViewTransition>
+                            <Routes>
+                                <Route path="/" element={<HomePage />} />
+                                <Route
+                                    path="/show/:name"
+                                    element={<ShowPage />}
+                                />
+                                <Route
+                                    path="/player"
+                                    element={<PlayerPage />}
+                                />
+                                <Route
+                                    path="/settings"
+                                    element={<SettingsPage />}
+                                />
+                                <Route
+                                    path="/remote"
+                                    element={<RemotePage />}
+                                />
+                            </Routes>
                         </div>
                     </BrowserRouter>
                 </WebsocketProvider>
